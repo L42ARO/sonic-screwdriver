@@ -12,7 +12,7 @@ import (
 	"log"
 	"net/http"
 
-	"sonic-screwdriver/sdk/go"
+	sonic "github.com/L42ARO/sonic-screwdriver/sdk/go"
 )
 
 var status = map[string]int{

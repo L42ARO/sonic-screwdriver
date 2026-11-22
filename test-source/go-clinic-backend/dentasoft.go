@@ -9,7 +9,7 @@ import (
 	"cmp"
 	"os"
 
-	"sonic-screwdriver/sdk/go"
+	sonic "github.com/L42ARO/sonic-screwdriver/sdk/go"
 )
 
 // DentalClinic is this app's project on the compute-box. SONIC_URL and SONIC_API_KEY set

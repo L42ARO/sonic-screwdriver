@@ -1,4 +1,4 @@
-module sonic-screwdriver/compute-box
+module github.com/L42ARO/sonic-screwdriver/compute-box
 
 go 1.26.0
 

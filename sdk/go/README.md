@@ -57,5 +57,6 @@ change, err := UpdateBalance.Run(ctx, UpdateBalanceInput{PatientID: "P-1004"})
   rest on the caller's side.
 - `SONIC_URL` and `SONIC_API_KEY` environment variables configure the connection.
 
-Module path `sonic-screwdriver/sdk/go`, package `sonic`. Apps in this repo use it through
-a `replace` directive in their `go.mod`.
+Install with `go get github.com/L42ARO/sonic-screwdriver/sdk/go` and import it as
+`sonic "github.com/L42ARO/sonic-screwdriver/sdk/go"`. Apps in this repo use the local copy
+through a `replace` directive in their `go.mod`.

@@ -5,7 +5,8 @@ ENV GOMAXPROCS=2 GOMEMLIMIT=768MiB
 COPY go.mod go.sum ./
 RUN go mod download
 COPY main.go ./
-COPY src ./src
+COPY internal ./internal
+COPY server ./server
 # Keep compiler caches off the small EC2 root disk. Dependencies remain cached above.
 RUN --mount=type=tmpfs,target=/root/.cache/go-build \
     CGO_ENABLED=0 go build -p 1 -trimpath -ldflags="-s -w" -o /out/compute-box .

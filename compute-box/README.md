@@ -82,8 +82,9 @@ Read from the environment, then `.env` (the environment wins).
 ## Layout
 
 ```
-main.go                     wiring only: config, store, services, HTTP server
-src/
+main.go                     the stock binary: reads the config and calls server.Run
+server/                     public API: Run(ctx, Options), Config, Options.Routes
+internal/                   everything else; not importable from other modules
   config/                   settings from the environment and .env
   store/                    SQLite: users, projects, operations, machines, jobs, steps, usage
   routes/                   HTTP handlers: caller API, agent endpoint, viewer
@@ -173,5 +174,22 @@ the agreed figure or one that adds the write premium. Both are stored per call.
 go test ./...
 ```
 
-`src/routes/e2e_test.go` runs the whole caller path against a pretend agent with the
-scripted brain. `src/services/budget/pricing_test.go` pins the cost formula.
+`internal/routes/e2e_test.go` runs the whole caller path against a pretend agent with the
+scripted brain. `internal/services/budget/pricing_test.go` pins the cost formula.
+`server/server_test.go` runs the server the way an embedding program would.
+
+## Embedding
+
+Other Go programs can run the compute-box with their own additions:
+
+```go
+import "github.com/L42ARO/sonic-screwdriver/compute-box/server"
+
+cfg := server.ConfigFromEnv()
+err := server.Run(ctx, server.Options{
+    Config: cfg,
+    Routes: func(mux *http.ServeMux) { mux.HandleFunc("GET /extra", handler) },
+})
+```
+
+Only the `server` package is public; `internal/` may change between releases.

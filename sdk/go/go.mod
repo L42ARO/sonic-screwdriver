@@ -1,4 +1,4 @@
-module sonic-screwdriver/sdk/go
+module github.com/L42ARO/sonic-screwdriver/sdk/go
 
 go 1.25.0
 
