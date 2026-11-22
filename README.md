@@ -133,3 +133,13 @@ For a real closed-app evaluation, run `python evals/run.py dentasoft --cold-star
 - Per-machine enrollment and caller authorization for a multi-user compute-box.
 - Generated OpenAPI spec and the `sonic` CLI.
 - Replay of recorded click paths, to cut cost and time on repeated operations.
+
+## License
+
+- The compute-box, local-agent, examples, test targets and evals are licensed under the
+  [GNU Affero General Public License v3.0](LICENSE). If you modify them and distribute
+  them, or let others use them over a network (for example as a hosted service), you
+  must publish your modified source under the same license.
+- The SDKs in [`sdk/`](sdk) are licensed under the [Mozilla Public License 2.0](sdk/go/LICENSE).
+  Changes to the SDK files themselves must be shared, but applications that use the SDKs
+  can be under any license, including proprietary.

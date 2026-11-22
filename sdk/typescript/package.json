@@ -1,6 +1,7 @@
 {
   "name": "sonic-screwdriver",
   "version": "0.1.0",
+  "license": "MPL-2.0",
   "description": "Typed TypeScript client for the sonic-screwdriver compute-box: turn a legacy program's tasks into async functions.",
   "type": "module",
   "main": "dist/index.js",
