@@ -1,0 +1,132 @@
+{{define "home.html"}}
+{{template "head" "Dashboard"}}
+<header><h1>Dashboard</h1><span class="muted">read-only · configuration changes go through the SDK</span></header>
+
+<section class="stats" id="stats" data-live>
+  <div class="stat"><span class="label">Machines online</span><span class="value">{{.Online}} / {{len .Machines}}</span></div>
+  <div class="stat"><span class="label">Projects</span><span class="value">{{len .Projects}}</span></div>
+  <div class="stat"><span class="label">Jobs running · queued</span><span class="value">{{.Running}} · {{.Queued}}</span></div>
+  <div class="stat"><span class="label">Model spend</span><span class="value">{{money .Spent}}</span><span class="muted">of {{money .Cap}}</span></div>
+</section>
+
+<div class="cols">
+<section>
+  <h2 class="section">Machines</h2>
+  <div id="machines" data-live>
+  {{range .Machines}}
+  <div class="card" id="machine-{{.Name}}">
+    <div class="title"><span><span class="dot {{if .Online}}on{{end}}"></span><strong>{{.Name}}</strong></span>
+      <span class="muted">{{if .Online}}online{{else if .LastSeen}}offline · seen {{ago .LastSeen}}{{else}}never connected{{end}}</span></div>
+    <div class="grid">
+      <span>Now</span>
+      <span>{{with .Current}}<a href="/jobs/{{.ID}}">{{.Project}} / {{.Operation}}</a> <span class="s-running">· {{.Steps}} steps</span>{{else}}idle{{end}}</span>
+      <span>Queued</span><span>{{if .Queued}}<span class="s-queued">{{.Queued}} waiting</span>{{else}}none{{end}}</span>
+      {{if .Screen}}<span>Screen</span><span>{{.Screen}}</span>{{end}}
+    </div>
+    <details id="machine-{{.Name}}-programs"><summary>Installed programs ({{len .Installed}})</summary>
+      {{range .Installed}}
+      <div class="op"><strong>{{.Name}}</strong>
+        <div class="grid">
+          <span>Executable</span><code>{{.Executable}}</code>
+          {{if .Args}}<span>Arguments</span><code>{{range $i, $a := .Args}}{{if $i}} {{end}}{{$a}}{{end}}</code>{{end}}
+          {{if .WorkingDirectory}}<span>Working dir</span><code>{{.WorkingDirectory}}</code>{{end}}
+          <span>Window title</span><span>contains “{{.WindowTitleContains}}”</span>
+          {{if .StartupTimeoutMS}}<span>Startup timeout</span><span>{{.StartupTimeoutMS}} ms</span>{{end}}
+        </div>
+      </div>
+      {{else}}<p class="muted">None declared for this machine.</p>{{end}}
+    </details>
+  </div>
+  {{else}}
+  <p class="muted card">No machine has connected yet. Start a local-agent and enter this server's URL.</p>
+  {{end}}
+  </div>
+</section>
+
+<section>
+  <div class="title"><h2 class="section">Recent jobs</h2>
+    <span class="filters">
+      <select data-filter="project" aria-label="Filter by project"><option value="">All projects</option>
+        {{range .Projects}}<option>{{.Name}}</option>{{end}}</select>
+      <select data-filter="machine" aria-label="Filter by machine"><option value="">All machines</option>
+        {{range .Machines}}<option>{{.Name}}</option>{{end}}</select>
+    </span></div>
+  <div class="card" id="jobs" data-live>
+    {{range .Jobs}}
+    <div class="row job" data-project="{{.Project}}" data-machine="{{.Machine}}">
+      <span><a href="/jobs/{{.ID}}">{{.Project}} / {{.Operation}}</a> <span class="muted">· {{.Machine}}</span></span>
+      <span><span class="s-{{.Status}}">{{.Status}}{{if .ErrorCode}} · {{.ErrorCode}}{{end}}</span>
+        <span class="muted">· {{.Steps}} steps · {{money .CostUSD}} · {{ago .CreatedAt}}</span></span>
+    </div>
+    {{end}}
+    <p class="muted" id="jobs-empty" {{if .Jobs}}hidden{{end}}>No jobs{{if .Jobs}} match these filters{{else}} yet{{end}}.</p>
+  </div>
+</section>
+</div>
+
+<h2 class="section">Projects</h2>
+{{range .Projects}}
+<div class="card" id="project-{{.Name}}">
+  <div class="title"><strong>{{.Name}}</strong>
+    <span class="muted">{{len .Operations}} operations · {{len .Programs}} programs · {{.Jobs}} jobs · {{money .CostUSD}}{{if .LastJobAt}} · last run {{ago .LastJobAt}}{{end}}</span></div>
+  <details><summary>Programs ({{len .Programs}})</summary>
+    {{range .Programs}}
+    <div class="op"><strong>{{.Name}}</strong> <span class="muted">· {{.Description}}</span>
+      {{if .Instructions}}<div class="text">{{.Instructions}}</div>{{end}}</div>
+    {{else}}<p class="muted">None declared.</p>{{end}}
+  </details>
+  <details><summary>Operations ({{len .Operations}})</summary>
+    <p class="note">Instructions include the project context the SDK adds to every operation.</p>
+    {{range .Operations}}
+    <div class="op"><strong>{{.Name}}</strong> <span class="muted">· {{.Description}}</span>
+      <div class="text">{{or .Instructions "—"}}</div>
+      <details><summary>Input schema</summary><pre>{{pretty .Input}}</pre></details>
+      <details><summary>Output schema</summary><pre>{{pretty .Output}}</pre></details>
+    </div>
+    {{else}}<p class="muted">None synced.</p>{{end}}
+  </details>
+</div>
+{{else}}
+<p class="muted card">No projects yet. A backend creates its project when the SDK syncs at startup.</p>
+{{end}}
+
+<script>
+(() => {
+  // Live regions are re-fetched every few seconds; open sections and filters are kept.
+  const filters = [...document.querySelectorAll("[data-filter]")];
+  function applyFilters() {
+    const want = Object.fromEntries(filters.map(f => [f.dataset.filter, f.value]));
+    const rows = [...document.querySelectorAll("#jobs .job")];
+    let shown = 0;
+    for (const row of rows) {
+      const ok = (!want.project || row.dataset.project === want.project) &&
+                 (!want.machine || row.dataset.machine === want.machine);
+      row.hidden = !ok;
+      if (ok) shown++;
+    }
+    const empty = document.getElementById("jobs-empty");
+    empty.hidden = shown > 0;
+    empty.textContent = rows.length ? "No jobs match these filters." : "No jobs yet.";
+  }
+  async function refresh() {
+    try {
+      const res = await fetch(location.pathname, { cache: "no-store" });
+      if (!res.ok) return;
+      const next = new DOMParser().parseFromString(await res.text(), "text/html");
+      for (const region of document.querySelectorAll("[data-live]")) {
+        const fresh = next.getElementById(region.id);
+        if (!fresh) continue;
+        const open = new Set([...region.querySelectorAll("details[open]")].map(d => d.id));
+        region.innerHTML = fresh.innerHTML;
+        for (const d of region.querySelectorAll("details")) if (open.has(d.id)) d.open = true;
+      }
+      applyFilters();
+    } catch { /* offline for a moment; try again next tick */ }
+  }
+  filters.forEach(f => f.addEventListener("change", applyFilters));
+  applyFilters();
+  setInterval(refresh, 3000);
+})();
+</script>
+{{template "foot"}}
+{{end}}

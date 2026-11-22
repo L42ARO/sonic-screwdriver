@@ -1,0 +1,11 @@
+.env
+.env.*
+.deployment.env
+data/
+.git/
+*.pem
+*.key
+*.exe
+*.db
+*.sqlite*
+README.md

@@ -1,0 +1,12 @@
+{
+  "project": "dentasoft-eval",
+  "app": {
+    "script": "test-target/dentasoft/dentasoft.py",
+    "data": "test-target/dentasoft/patients.json",
+    "seed": "test-target/dentasoft/patients.seed.json",
+    "startup_seconds": 4,
+    "window_title_contains": "DentaSoft",
+    "description": "DentaSoft patient records, appointments and balances."
+  },
+  "context": "Use DentaSoft Patient Manager. Open the registered dentasoft program if needed. If its login box is showing, log in with user name drsmith and password molar123. DentaSoft is slow: after each action wait for 'Please wait...' to clear. Its text boxes only support typing and Backspace: shortcuts like Ctrl+A, Home or Delete do nothing."
+}

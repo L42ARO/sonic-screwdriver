@@ -1,0 +1,52 @@
+[
+  {
+    "name": "lookup_patient",
+    "description": "Look up a patient's record by patient ID.",
+    "instructions": "Type the patient ID into the Patient ID box in the Find Patient panel and press Find. Click the matching row under Results, then read the fields in the Patient Record panel, zooming in if any text is hard to read. If DentaSoft says no records were found, return found=false and leave the other fields out.",
+    "input": {"type": "object", "properties": {"patient_id": {"type": "string", "pattern": "^P-\\d{4}$"}}, "required": ["patient_id"], "additionalProperties": false},
+    "output": {"type": "object", "properties": {
+      "found": {"type": "boolean"}, "first_name": {"type": "string"}, "last_name": {"type": "string"},
+      "date_of_birth": {"type": "string"}, "phone": {"type": "string"}, "insurance": {"type": "string"},
+      "policy": {"type": "string"}, "balance": {"type": "number"}, "last_visit": {"type": "string"},
+      "next_appointment": {"type": "string", "description": "empty string if none"},
+      "allergies": {"type": "string", "description": "empty string if none"}, "notes": {"type": "string"}},
+      "required": ["found"]}
+  },
+  {
+    "name": "find_patients_by_last_name",
+    "description": "List every patient whose last name starts with the given text.",
+    "instructions": "Leave the Patient ID box empty, type the text into the Last Name box in the Find Patient panel and press Find. Read every row of the Results list (each row is 'ID  Last, First'). Return all of them; return an empty list if DentaSoft finds none.",
+    "input": {"type": "object", "properties": {"last_name": {"type": "string", "minLength": 1}}, "required": ["last_name"], "additionalProperties": false},
+    "output": {"type": "object", "properties": {"patients": {"type": "array", "items": {"type": "object", "properties": {
+      "patient_id": {"type": "string"}, "first_name": {"type": "string"}, "last_name": {"type": "string"}},
+      "required": ["patient_id", "first_name", "last_name"]}}}, "required": ["patients"]}
+  },
+  {
+    "name": "update_balance",
+    "description": "Set a patient's Balance Due.",
+    "instructions": "Find the patient by Patient ID and open their record. Note the current Balance Due. Click Edit, clear the Balance Due field, type the new amount with two decimals, click Save, answer Yes to the confirmation and OK to the success message. Then re-read Balance Due and only report success if it shows the new amount. If the patient does not exist, fail with code not_found.",
+    "input": {"type": "object", "properties": {"patient_id": {"type": "string", "pattern": "^P-\\d{4}$"}, "balance": {"type": "number", "minimum": 0}}, "required": ["patient_id", "balance"], "additionalProperties": false},
+    "output": {"type": "object", "properties": {"previous_balance": {"type": "number"}, "new_balance": {"type": "number"}}, "required": ["previous_balance", "new_balance"]}
+  },
+  {
+    "name": "update_contact",
+    "description": "Change a patient's phone number and/or allergies.",
+    "instructions": "Find the patient by Patient ID and open their record. Click Edit and replace only the fields given in the input (Phone, Allergies), leaving every other field as it is. Click Save, answer Yes, then OK. Re-read the record and report the Phone and Allergies it now shows. If the patient does not exist, fail with code not_found.",
+    "input": {"type": "object", "properties": {"patient_id": {"type": "string", "pattern": "^P-\\d{4}$"}, "phone": {"type": "string"}, "allergies": {"type": "string"}}, "required": ["patient_id"], "additionalProperties": false},
+    "output": {"type": "object", "properties": {"phone": {"type": "string"}, "allergies": {"type": "string"}}, "required": ["phone", "allergies"]}
+  },
+  {
+    "name": "set_next_appointment",
+    "description": "Set a patient's next appointment date.",
+    "instructions": "Find the patient by Patient ID and open their record. Click Edit, replace the Next Appt field with the date (MM/DD/YYYY), click Save, answer Yes, then OK. Re-read the record and report what Next Appt shows, and what it showed before.",
+    "input": {"type": "object", "properties": {"patient_id": {"type": "string", "pattern": "^P-\\d{4}$"}, "date": {"type": "string", "pattern": "^\\d{2}/\\d{2}/\\d{4}$"}}, "required": ["patient_id", "date"], "additionalProperties": false},
+    "output": {"type": "object", "properties": {"previous": {"type": "string", "description": "empty string if there was none"}, "next_appointment": {"type": "string"}}, "required": ["previous", "next_appointment"]}
+  },
+  {
+    "name": "get_about_info",
+    "description": "Read DentaSoft's version and build number.",
+    "instructions": "Open the Help menu and choose About DentaSoft. Read the version and build number from the box that appears, then close it with OK.",
+    "input": {"type": "object", "properties": {}, "additionalProperties": false},
+    "output": {"type": "object", "properties": {"version": {"type": "string"}, "build": {"type": "string"}}, "required": ["version", "build"]}
+  }
+]

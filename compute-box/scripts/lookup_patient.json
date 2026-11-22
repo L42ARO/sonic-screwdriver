@@ -1,0 +1,20 @@
+{
+  "_comment": "Scripted-brain fixture for pipeline tests: fixed coordinates for DentaSoft at its default position on a 1280x720 screenshot. The real brain needs no script.",
+  "actions": [
+    {"action": "focus_window", "title_contains": "DentaSoft"},
+    {"action": "click", "x": 457, "y": 319},
+    {"action": "type", "text": "drsmith"},
+    {"action": "key", "keys": "tab"},
+    {"action": "type", "text": "molar123"},
+    {"action": "key", "keys": "enter"},
+    {"action": "wait", "ms": 3500},
+    {"action": "click", "x": 232, "y": 184},
+    {"action": "type", "text": "{{patient_id}}"},
+    {"action": "key", "keys": "enter"},
+    {"action": "wait", "ms": 2500},
+    {"action": "click", "x": 215, "y": 254},
+    {"action": "wait", "ms": 2500},
+    {"action": "zoom", "x": 423, "y": 176, "w": 308, "h": 383}
+  ],
+  "output": {"found": true, "first_name": "Ellen", "last_name": "Dawson", "balance": 310.75}
+}

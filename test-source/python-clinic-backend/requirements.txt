@@ -1,0 +1,4 @@
+fastapi>=0.115
+uvicorn>=0.30
+# the sonic-screwdriver Python SDK, from this repo (would be a normal pip package)
+-e ../../sdk/python

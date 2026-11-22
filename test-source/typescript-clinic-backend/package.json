@@ -1,0 +1,19 @@
+{
+  "name": "typescript-clinic-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node main.ts",
+    "check": "tsc"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "sonic-screwdriver": "file:../../sdk/typescript",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}

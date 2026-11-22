@@ -1,0 +1,31 @@
+{{define "job.html"}}
+{{template "head" .Job.Operation}}
+{{if not .Job.Done}}<meta http-equiv="refresh" content="3">{{end}}
+<p><a href="/">← dashboard</a></p>
+<header>
+  <h1>{{.Job.Project}} / {{.Job.Operation}}</h1>
+  <span class="s-{{.Job.Status}}">{{.Job.Status}}{{if .Job.ErrorCode}} · {{.Job.ErrorCode}}{{end}}</span>
+</header>
+
+<section class="card">
+  <div class="row"><span class="muted">job</span><code>{{.Job.ID}}</code></div>
+  <div class="row"><span class="muted">machine</span><span>{{.Job.Machine}}</span></div>
+  <div class="row"><span class="muted">model</span><span>{{or .Job.Model "-"}}</span></div>
+  <div class="row"><span class="muted">cost</span><span>{{money .Job.CostUSD}}</span></div>
+  <div class="row"><span class="muted">input</span><code>{{printf "%s" .Job.Input}}</code></div>
+  {{if .Job.Output}}<div class="row"><span class="muted">output</span><code>{{printf "%s" .Job.Output}}</code></div>{{end}}
+  {{if .Job.ErrorMessage}}<div class="row"><span class="muted">error</span><span>{{.Job.ErrorMessage}}{{if .Job.OutcomeUnknown}} (outcome unknown){{end}}</span></div>{{end}}
+</section>
+
+<section class="card steps">
+  <h2>Steps</h2>
+  {{range .Steps}}
+  <div class="step">
+    <strong>{{.N}}.</strong> {{.Description}}{{if not .OK}} <span class="s-failed">· failed: {{.Error}}</span>{{end}}
+    {{if .Note}}<pre class="muted">{{.Note}}</pre>{{end}}
+    {{if .Screenshot}}<a href="/screens/{{$.Job.ID}}/{{.Screenshot}}"><img loading="lazy" src="/screens/{{$.Job.ID}}/{{.Screenshot}}" alt="screen after step {{.N}}"></a>{{end}}
+  </div>
+  {{else}}<p class="muted">No steps yet.</p>{{end}}
+</section>
+{{template "foot"}}
+{{end}}

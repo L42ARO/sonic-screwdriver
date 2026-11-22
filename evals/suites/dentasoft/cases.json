@@ -1,0 +1,248 @@
+[
+  {
+    "name": "lookup P-1004",
+    "operation": "lookup_patient",
+    "input": {
+      "patient_id": "P-1004"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "found": true,
+        "first_name": "Ellen",
+        "last_name": "Dawson",
+        "date_of_birth": "01/22/1954",
+        "phone": "(305) 555-0119",
+        "insurance": "Medicare Adv.",
+        "policy": "MA-7781-02",
+        "balance": 310.75,
+        "last_visit": "06/30/2026",
+        "next_appointment": "",
+        "allergies": "Codeine, Aspirin"
+      }
+    }
+  },
+  {
+    "name": "lookup P-1010 (notes, allergies)",
+    "operation": "lookup_patient",
+    "input": {
+      "patient_id": "P-1010"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "found": true,
+        "first_name": "Marcus",
+        "last_name": "Johnson",
+        "date_of_birth": "08/09/1962",
+        "phone": "(954) 555-0171",
+        "insurance": "Aetna",
+        "policy": "AE-1120984",
+        "balance": 0.0,
+        "last_visit": "07/19/2026",
+        "next_appointment": "01/19/2027",
+        "allergies": "Penicillin"
+      }
+    }
+  },
+  {
+    "name": "lookup P-1012",
+    "operation": "lookup_patient",
+    "input": {
+      "patient_id": "P-1012"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "found": true,
+        "first_name": "Hiro",
+        "last_name": "Nakamura",
+        "date_of_birth": "04/23/1988",
+        "phone": "(786) 555-0137",
+        "insurance": "MetLife",
+        "policy": "ML-410992",
+        "balance": 0.0,
+        "last_visit": "10/30/2026",
+        "next_appointment": "05/01/2027",
+        "allergies": ""
+      }
+    }
+  },
+  {
+    "name": "lookup missing P-9999",
+    "operation": "lookup_patient",
+    "input": {
+      "patient_id": "P-9999"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "found": false
+      }
+    }
+  },
+  {
+    "name": "find last name 'Daw' (2 matches)",
+    "operation": "find_patients_by_last_name",
+    "input": {
+      "last_name": "Daw"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "patients": [
+          {
+            "patient_id": "P-1004",
+            "first_name": "Ellen",
+            "last_name": "Dawson"
+          },
+          {
+            "patient_id": "P-1005",
+            "first_name": "Robert",
+            "last_name": "Dawson"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "find last name 'Nakamura' (1 match)",
+    "operation": "find_patients_by_last_name",
+    "input": {
+      "last_name": "Nakamura"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "patients": [
+          {
+            "patient_id": "P-1012",
+            "first_name": "Hiro",
+            "last_name": "Nakamura"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "find last name 'Zeller' (none)",
+    "operation": "find_patients_by_last_name",
+    "input": {
+      "last_name": "Zeller"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "patients": []
+      }
+    }
+  },
+  {
+    "name": "update balance P-1002 to 0",
+    "operation": "update_balance",
+    "input": {
+      "patient_id": "P-1002",
+      "balance": 0
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "previous_balance": 125.5,
+        "new_balance": 0
+      }
+    },
+    "data": [
+      {
+        "list": "",
+        "where": {
+          "id": "P-1002"
+        },
+        "fields": {
+          "balance": 0,
+          "phone": "(305) 555-0177"
+        }
+      }
+    ]
+  },
+  {
+    "name": "update balance of missing P-9999",
+    "operation": "update_balance",
+    "input": {
+      "patient_id": "P-9999",
+      "balance": 10
+    },
+    "expect": {
+      "status": "failed",
+      "error_code": "not_found"
+    }
+  },
+  {
+    "name": "update phone + allergies P-1007",
+    "operation": "update_contact",
+    "input": {
+      "patient_id": "P-1007",
+      "phone": "(305) 555-0100",
+      "allergies": "Peanuts"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "phone": "(305) 555-0100",
+        "allergies": "Peanuts"
+      }
+    },
+    "data": [
+      {
+        "list": "",
+        "where": {
+          "id": "P-1007"
+        },
+        "fields": {
+          "phone": "(305) 555-0100",
+          "allergies": "Peanuts",
+          "insurance": "None",
+          "balance": 0.0
+        }
+      }
+    ]
+  },
+  {
+    "name": "set next appointment P-1002",
+    "operation": "set_next_appointment",
+    "input": {
+      "patient_id": "P-1002",
+      "date": "01/15/2027"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "previous": "",
+        "next_appointment": "01/15/2027"
+      }
+    },
+    "data": [
+      {
+        "list": "",
+        "where": {
+          "id": "P-1002"
+        },
+        "fields": {
+          "next_appt": "01/15/2027",
+          "balance": 125.5
+        }
+      }
+    ]
+  },
+  {
+    "name": "about box via Help menu",
+    "operation": "get_about_info",
+    "input": {},
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "version": "2.3",
+        "build": "1147"
+      }
+    }
+  }
+]

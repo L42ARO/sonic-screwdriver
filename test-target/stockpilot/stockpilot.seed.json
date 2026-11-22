@@ -1,0 +1,419 @@
+{
+ "products": [
+  {
+   "sku": "ELE-1001",
+   "name": "Cable Tie 200mm (100)",
+   "category": "Electrical",
+   "on_hand": 19,
+   "reorder_at": 10,
+   "location": "B-04-3",
+   "price": 12.54
+  },
+  {
+   "sku": "ELE-1008",
+   "name": "Wire Nut Yellow (50)",
+   "category": "Electrical",
+   "on_hand": 15,
+   "reorder_at": 5,
+   "location": "A-12-5",
+   "price": 52.82
+  },
+  {
+   "sku": "ELE-1015",
+   "name": "Electrical Tape Black",
+   "category": "Electrical",
+   "on_hand": 0,
+   "reorder_at": 5,
+   "location": "C-04-5",
+   "price": 10.67
+  },
+  {
+   "sku": "ELE-1022",
+   "name": "Junction Box 4in",
+   "category": "Electrical",
+   "on_hand": 281,
+   "reorder_at": 50,
+   "location": "A-11-4",
+   "price": 43.0
+  },
+  {
+   "sku": "ELE-1029",
+   "name": "Toggle Switch 15A",
+   "category": "Electrical",
+   "on_hand": 153,
+   "reorder_at": 40,
+   "location": "B-07-5",
+   "price": 24.72
+  },
+  {
+   "sku": "ELE-1036",
+   "name": "Duplex Outlet 15A",
+   "category": "Electrical",
+   "on_hand": 37,
+   "reorder_at": 10,
+   "location": "C-08-3",
+   "price": 7.46
+  },
+  {
+   "sku": "ELE-1043",
+   "name": "Wire 14AWG 50ft",
+   "category": "Electrical",
+   "on_hand": 62,
+   "reorder_at": 15,
+   "location": "A-11-2",
+   "price": 17.03
+  },
+  {
+   "sku": "FAS-1001",
+   "name": "Hex Bolt M6 x 30",
+   "category": "Fasteners",
+   "on_hand": 69,
+   "reorder_at": 15,
+   "location": "B-06-2",
+   "price": 26.09
+  },
+  {
+   "sku": "FAS-1008",
+   "name": "Hex Bolt M8 x 40",
+   "category": "Fasteners",
+   "on_hand": 4,
+   "reorder_at": 40,
+   "location": "A-10-4",
+   "price": 22.06
+  },
+  {
+   "sku": "FAS-1015",
+   "name": "Hex Nut M6",
+   "category": "Fasteners",
+   "on_hand": 226,
+   "reorder_at": 50,
+   "location": "D-03-4",
+   "price": 12.97
+  },
+  {
+   "sku": "FAS-1022",
+   "name": "Hex Nut M8",
+   "category": "Fasteners",
+   "on_hand": 10,
+   "reorder_at": 5,
+   "location": "B-04-2",
+   "price": 38.08
+  },
+  {
+   "sku": "FAS-1029",
+   "name": "Flat Washer M6",
+   "category": "Fasteners",
+   "on_hand": 150,
+   "reorder_at": 40,
+   "location": "D-07-3",
+   "price": 5.54
+  },
+  {
+   "sku": "FAS-1036",
+   "name": "Lock Washer M8",
+   "category": "Fasteners",
+   "on_hand": 249,
+   "reorder_at": 50,
+   "location": "C-12-1",
+   "price": 29.2
+  },
+  {
+   "sku": "FAS-1043",
+   "name": "Wood Screw 4 x 40",
+   "category": "Fasteners",
+   "on_hand": 92,
+   "reorder_at": 20,
+   "location": "C-10-1",
+   "price": 38.57
+  },
+  {
+   "sku": "FAS-1050",
+   "name": "Drywall Screw 3.5 x 35",
+   "category": "Fasteners",
+   "on_hand": 9,
+   "reorder_at": 25,
+   "location": "B-04-1",
+   "price": 49.86
+  },
+  {
+   "sku": "FAS-1057",
+   "name": "Anchor Plug 8mm",
+   "category": "Fasteners",
+   "on_hand": 105,
+   "reorder_at": 40,
+   "location": "C-06-5",
+   "price": 9.61
+  },
+  {
+   "sku": "PLU-1001",
+   "name": "PVC Elbow 1/2in",
+   "category": "Plumbing",
+   "on_hand": 77,
+   "reorder_at": 15,
+   "location": "D-08-3",
+   "price": 1.88
+  },
+  {
+   "sku": "PLU-1008",
+   "name": "PVC Tee 3/4in",
+   "category": "Plumbing",
+   "on_hand": 89,
+   "reorder_at": 15,
+   "location": "D-02-2",
+   "price": 3.87
+  },
+  {
+   "sku": "PLU-1015",
+   "name": "Copper Pipe 1/2in 10ft",
+   "category": "Plumbing",
+   "on_hand": 21,
+   "reorder_at": 15,
+   "location": "D-05-2",
+   "price": 31.64
+  },
+  {
+   "sku": "PLU-1022",
+   "name": "Teflon Tape",
+   "category": "Plumbing",
+   "on_hand": 3,
+   "reorder_at": 10,
+   "location": "B-02-4",
+   "price": 39.87
+  },
+  {
+   "sku": "PLU-1029",
+   "name": "Ball Valve 1/2in",
+   "category": "Plumbing",
+   "on_hand": 78,
+   "reorder_at": 40,
+   "location": "B-02-3",
+   "price": 17.72
+  },
+  {
+   "sku": "PLU-1036",
+   "name": "Hose Clamp 25mm",
+   "category": "Plumbing",
+   "on_hand": 13,
+   "reorder_at": 10,
+   "location": "A-09-3",
+   "price": 34.0
+  },
+  {
+   "sku": "PLU-1043",
+   "name": "P-Trap 1-1/2in",
+   "category": "Plumbing",
+   "on_hand": 32,
+   "reorder_at": 10,
+   "location": "C-02-2",
+   "price": 58.97
+  },
+  {
+   "sku": "PLU-1050",
+   "name": "Faucet Cartridge",
+   "category": "Plumbing",
+   "on_hand": 30,
+   "reorder_at": 10,
+   "location": "C-05-3",
+   "price": 9.19
+  },
+  {
+   "sku": "PNT-1001",
+   "name": "Interior Paint White 1gal",
+   "category": "Paint",
+   "on_hand": 56,
+   "reorder_at": 10,
+   "location": "B-06-4",
+   "price": 48.16
+  },
+  {
+   "sku": "PNT-1008",
+   "name": "Primer 1gal",
+   "category": "Paint",
+   "on_hand": 102,
+   "reorder_at": 25,
+   "location": "C-09-4",
+   "price": 55.45
+  },
+  {
+   "sku": "PNT-1015",
+   "name": "Paint Roller 9in",
+   "category": "Paint",
+   "on_hand": 84,
+   "reorder_at": 25,
+   "location": "B-07-4",
+   "price": 30.63
+  },
+  {
+   "sku": "PNT-1022",
+   "name": "Brush Set 3pc",
+   "category": "Paint",
+   "on_hand": 97,
+   "reorder_at": 20,
+   "location": "A-02-2",
+   "price": 39.91
+  },
+  {
+   "sku": "PNT-1029",
+   "name": "Painter's Tape 1.5in",
+   "category": "Paint",
+   "on_hand": 79,
+   "reorder_at": 20,
+   "location": "B-01-3",
+   "price": 42.32
+  },
+  {
+   "sku": "PNT-1036",
+   "name": "Drop Cloth 9x12",
+   "category": "Paint",
+   "on_hand": 1,
+   "reorder_at": 15,
+   "location": "C-07-2",
+   "price": 13.79
+  },
+  {
+   "sku": "PNT-1043",
+   "name": "Caulk White",
+   "category": "Paint",
+   "on_hand": 74,
+   "reorder_at": 15,
+   "location": "D-05-1",
+   "price": 13.86
+  },
+  {
+   "sku": "PNT-1050",
+   "name": "Paint Tray",
+   "category": "Paint",
+   "on_hand": 115,
+   "reorder_at": 20,
+   "location": "D-07-5",
+   "price": 22.83
+  },
+  {
+   "sku": "SAF-1001",
+   "name": "Safety Glasses Clear",
+   "category": "Safety",
+   "on_hand": 106,
+   "reorder_at": 25,
+   "location": "C-09-1",
+   "price": 35.08
+  },
+  {
+   "sku": "SAF-1008",
+   "name": "Nitrile Gloves L (100)",
+   "category": "Safety",
+   "on_hand": 49,
+   "reorder_at": 20,
+   "location": "D-04-2",
+   "price": 3.59
+  },
+  {
+   "sku": "SAF-1015",
+   "name": "Ear Plugs (50 pairs)",
+   "category": "Safety",
+   "on_hand": 56,
+   "reorder_at": 15,
+   "location": "A-12-4",
+   "price": 13.39
+  },
+  {
+   "sku": "SAF-1022",
+   "name": "Dust Mask N95 (10)",
+   "category": "Safety",
+   "on_hand": 18,
+   "reorder_at": 15,
+   "location": "B-09-4",
+   "price": 44.2
+  },
+  {
+   "sku": "SAF-1029",
+   "name": "Hi-Vis Vest L",
+   "category": "Safety",
+   "on_hand": 6,
+   "reorder_at": 15,
+   "location": "D-02-3",
+   "price": 22.84
+  },
+  {
+   "sku": "SAF-1036",
+   "name": "Hard Hat White",
+   "category": "Safety",
+   "on_hand": 48,
+   "reorder_at": 10,
+   "location": "C-08-1",
+   "price": 38.98
+  },
+  {
+   "sku": "TOO-1001",
+   "name": "Claw Hammer 16oz",
+   "category": "Tools",
+   "on_hand": 2,
+   "reorder_at": 40,
+   "location": "B-08-3",
+   "price": 19.08
+  },
+  {
+   "sku": "TOO-1008",
+   "name": "Tape Measure 25ft",
+   "category": "Tools",
+   "on_hand": 82,
+   "reorder_at": 20,
+   "location": "C-01-3",
+   "price": 21.24
+  },
+  {
+   "sku": "TOO-1015",
+   "name": "Utility Knife",
+   "category": "Tools",
+   "on_hand": 247,
+   "reorder_at": 50,
+   "location": "D-12-4",
+   "price": 9.58
+  },
+  {
+   "sku": "TOO-1022",
+   "name": "Screwdriver Set 6pc",
+   "category": "Tools",
+   "on_hand": 25,
+   "reorder_at": 5,
+   "location": "A-07-2",
+   "price": 52.18
+  },
+  {
+   "sku": "TOO-1029",
+   "name": "Adjustable Wrench 10in",
+   "category": "Tools",
+   "on_hand": 189,
+   "reorder_at": 50,
+   "location": "C-06-3",
+   "price": 49.84
+  },
+  {
+   "sku": "TOO-1036",
+   "name": "Hex Key Set Metric",
+   "category": "Tools",
+   "on_hand": 89,
+   "reorder_at": 15,
+   "location": "A-11-5",
+   "price": 19.74
+  },
+  {
+   "sku": "TOO-1043",
+   "name": "Level 24in",
+   "category": "Tools",
+   "on_hand": 73,
+   "reorder_at": 40,
+   "location": "C-07-3",
+   "price": 17.81
+  },
+  {
+   "sku": "TOO-1050",
+   "name": "Hacksaw 12in",
+   "category": "Tools",
+   "on_hand": 26,
+   "reorder_at": 10,
+   "location": "D-08-1",
+   "price": 9.08
+  }
+ ],
+ "movements": []
+}

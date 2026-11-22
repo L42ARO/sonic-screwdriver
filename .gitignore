@@ -1,0 +1,29 @@
+# secrets
+.env
+.env.*
+!.env.example
+!.env.secrets.example
+.deployment.env
+*.pem
+*.key
+
+# build output and dependencies
+*.exe
+target/
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.egg-info/
+
+# runtime data
+compute-box/data/
+test-target/dentasoft/patients.json
+test-target/stockpilot/stockpilot.json
+evals/results/
+
+# tooling
+.claude/
+
+# local-agent smoke-test screenshots (real desktop captures)
+run-out/

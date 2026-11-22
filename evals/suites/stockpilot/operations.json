@@ -1,0 +1,63 @@
+[
+  {
+    "name": "get_product",
+    "description": "Read one product's details by SKU.",
+    "instructions": "Go to Products and type the SKU into the search box. Open the matching product (double-click its row) and read its details. If no product matches, return found=false.",
+    "input": {"type": "object", "properties": {"sku": {"type": "string"}}, "required": ["sku"], "additionalProperties": false},
+    "output": {"type": "object", "properties": {
+      "found": {"type": "boolean"}, "name": {"type": "string"}, "category": {"type": "string"},
+      "on_hand": {"type": "integer"}, "reorder_at": {"type": "integer"}, "location": {"type": "string"},
+      "price": {"type": "number"}}, "required": ["found"]}
+  },
+  {
+    "name": "find_products",
+    "description": "List every product whose name or SKU contains some text.",
+    "instructions": "Go to Products and type the text into the search box. Read every matching row, across all pages if there is more than one. Return each product's SKU, name and quantity on hand.",
+    "input": {"type": "object", "properties": {"query": {"type": "string", "minLength": 1}}, "required": ["query"], "additionalProperties": false},
+    "output": {"type": "object", "properties": {"products": {"type": "array", "items": {"type": "object", "properties": {
+      "sku": {"type": "string"}, "name": {"type": "string"}, "on_hand": {"type": "integer"}},
+      "required": ["sku", "name", "on_hand"]}}}, "required": ["products"]}
+  },
+  {
+    "name": "list_low_stock",
+    "description": "List products at or below their reorder level, optionally in one category.",
+    "instructions": "Go to Products, tick 'Low stock only' and, if a category is given, choose it in the category dropdown. Read every row, across all pages if needed. Return each product's SKU, name, on hand and reorder level.",
+    "input": {"type": "object", "properties": {"category": {"type": "string", "enum": ["Electrical", "Fasteners", "Paint", "Plumbing", "Safety", "Tools"]}}, "additionalProperties": false},
+    "output": {"type": "object", "properties": {"products": {"type": "array", "items": {"type": "object", "properties": {
+      "sku": {"type": "string"}, "name": {"type": "string"}, "on_hand": {"type": "integer"}, "reorder_at": {"type": "integer"}},
+      "required": ["sku", "on_hand", "reorder_at"]}}}, "required": ["products"]}
+  },
+  {
+    "name": "count_products",
+    "description": "Count the products in a category.",
+    "instructions": "Go to Products and choose the category in the category dropdown, with 'Low stock only' unticked and the search box empty. Read how many products match.",
+    "input": {"type": "object", "properties": {"category": {"type": "string", "enum": ["Electrical", "Fasteners", "Paint", "Plumbing", "Safety", "Tools"]}}, "required": ["category"], "additionalProperties": false},
+    "output": {"type": "object", "properties": {"count": {"type": "integer"}}, "required": ["count"]}
+  },
+  {
+    "name": "most_expensive_product",
+    "description": "Find the most expensive product in a category.",
+    "instructions": "Go to Products, choose the category in the category dropdown, and sort by Price so the most expensive comes first (clicking a column header sorts by it; clicking again reverses the order). Report the top product.",
+    "input": {"type": "object", "properties": {"category": {"type": "string", "enum": ["Electrical", "Fasteners", "Paint", "Plumbing", "Safety", "Tools"]}}, "required": ["category"], "additionalProperties": false},
+    "output": {"type": "object", "properties": {"sku": {"type": "string"}, "name": {"type": "string"}, "price": {"type": "number"}}, "required": ["sku", "price"]}
+  },
+  {
+    "name": "adjust_stock",
+    "description": "Record a stock change for a product.",
+    "instructions": "Go to Products, find the product by SKU and open it. Click 'Adjust stock...', enter the change (negative to remove stock), choose the reason and type the note if one is given, then Save. Report the quantity on hand before and after. If StockPilot refuses the change (for example because stock would go below zero), close its message and fail with code invalid_input, quoting the message.",
+    "input": {"type": "object", "properties": {"sku": {"type": "string"}, "change": {"type": "integer", "not": {"const": 0}},
+      "reason": {"type": "string", "enum": ["Received", "Sold", "Damaged", "Count correction"]}, "note": {"type": "string"}},
+      "required": ["sku", "change", "reason"], "additionalProperties": false},
+    "output": {"type": "object", "properties": {"previous_on_hand": {"type": "integer"}, "new_on_hand": {"type": "integer"}}, "required": ["previous_on_hand", "new_on_hand"]}
+  },
+  {
+    "name": "create_product",
+    "description": "Add a new product.",
+    "instructions": "Go to Products and click '+ New product'. Fill in every field from the input, choosing the category from its dropdown, then click Create. If StockPilot shows an error in the form (such as a SKU that already exists), cancel the form and fail with code invalid_input, quoting the error.",
+    "input": {"type": "object", "properties": {"sku": {"type": "string"}, "name": {"type": "string"},
+      "category": {"type": "string", "enum": ["Electrical", "Fasteners", "Paint", "Plumbing", "Safety", "Tools"]},
+      "reorder_at": {"type": "integer", "minimum": 0}, "location": {"type": "string"}, "price": {"type": "number", "minimum": 0}},
+      "required": ["sku", "name", "category", "reorder_at", "location", "price"], "additionalProperties": false},
+    "output": {"type": "object", "properties": {"created": {"type": "boolean"}, "sku": {"type": "string"}}, "required": ["created", "sku"]}
+  }
+]

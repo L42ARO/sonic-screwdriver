@@ -1,0 +1,332 @@
+[
+  {
+    "name": "get FAS-1008",
+    "operation": "get_product",
+    "input": {
+      "sku": "FAS-1008"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "found": true,
+        "name": "Hex Bolt M8 x 40",
+        "category": "Fasteners",
+        "on_hand": 4,
+        "reorder_at": 40,
+        "location": "A-10-4",
+        "price": 22.06
+      }
+    }
+  },
+  {
+    "name": "get PNT-1036 (later page)",
+    "operation": "get_product",
+    "input": {
+      "sku": "PNT-1036"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "found": true,
+        "name": "Drop Cloth 9x12",
+        "category": "Paint",
+        "on_hand": 1,
+        "reorder_at": 15,
+        "location": "C-07-2",
+        "price": 13.79
+      }
+    }
+  },
+  {
+    "name": "get missing XYZ-9999",
+    "operation": "get_product",
+    "input": {
+      "sku": "XYZ-9999"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "found": false
+      }
+    }
+  },
+  {
+    "name": "find 'hex'",
+    "operation": "find_products",
+    "input": {
+      "query": "hex"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "products": [
+          {
+            "sku": "FAS-1001",
+            "name": "Hex Bolt M6 x 30",
+            "on_hand": 69
+          },
+          {
+            "sku": "FAS-1008",
+            "name": "Hex Bolt M8 x 40",
+            "on_hand": 4
+          },
+          {
+            "sku": "FAS-1015",
+            "name": "Hex Nut M6",
+            "on_hand": 226
+          },
+          {
+            "sku": "FAS-1022",
+            "name": "Hex Nut M8",
+            "on_hand": 10
+          },
+          {
+            "sku": "TOO-1036",
+            "name": "Hex Key Set Metric",
+            "on_hand": 89
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "find 'screw'",
+    "operation": "find_products",
+    "input": {
+      "query": "screw"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "products": [
+          {
+            "sku": "FAS-1043",
+            "name": "Wood Screw 4 x 40",
+            "on_hand": 92
+          },
+          {
+            "sku": "FAS-1050",
+            "name": "Drywall Screw 3.5 x 35",
+            "on_hand": 9
+          },
+          {
+            "sku": "TOO-1022",
+            "name": "Screwdriver Set 6pc",
+            "on_hand": 25
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "low stock, all categories",
+    "operation": "list_low_stock",
+    "input": {},
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "products": [
+          {
+            "sku": "ELE-1015",
+            "name": "Electrical Tape Black",
+            "on_hand": 0,
+            "reorder_at": 5
+          },
+          {
+            "sku": "FAS-1008",
+            "name": "Hex Bolt M8 x 40",
+            "on_hand": 4,
+            "reorder_at": 40
+          },
+          {
+            "sku": "FAS-1050",
+            "name": "Drywall Screw 3.5 x 35",
+            "on_hand": 9,
+            "reorder_at": 25
+          },
+          {
+            "sku": "PLU-1022",
+            "name": "Teflon Tape",
+            "on_hand": 3,
+            "reorder_at": 10
+          },
+          {
+            "sku": "PNT-1036",
+            "name": "Drop Cloth 9x12",
+            "on_hand": 1,
+            "reorder_at": 15
+          },
+          {
+            "sku": "SAF-1029",
+            "name": "Hi-Vis Vest L",
+            "on_hand": 6,
+            "reorder_at": 15
+          },
+          {
+            "sku": "TOO-1001",
+            "name": "Claw Hammer 16oz",
+            "on_hand": 2,
+            "reorder_at": 40
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "low stock, Fasteners",
+    "operation": "list_low_stock",
+    "input": {
+      "category": "Fasteners"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "products": [
+          {
+            "sku": "FAS-1008",
+            "name": "Hex Bolt M8 x 40",
+            "on_hand": 4,
+            "reorder_at": 40
+          },
+          {
+            "sku": "FAS-1050",
+            "name": "Drywall Screw 3.5 x 35",
+            "on_hand": 9,
+            "reorder_at": 25
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "count Plumbing",
+    "operation": "count_products",
+    "input": {
+      "category": "Plumbing"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "count": 8
+      }
+    }
+  },
+  {
+    "name": "most expensive in Tools",
+    "operation": "most_expensive_product",
+    "input": {
+      "category": "Tools"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "sku": "TOO-1022",
+        "name": "Screwdriver Set 6pc",
+        "price": 52.18
+      }
+    }
+  },
+  {
+    "name": "receive 20 x TOO-1001",
+    "operation": "adjust_stock",
+    "input": {
+      "sku": "TOO-1001",
+      "change": 20,
+      "reason": "Received",
+      "note": "PO 4471"
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "previous_on_hand": 2,
+        "new_on_hand": 22
+      }
+    },
+    "data": [
+      {
+        "list": "products",
+        "where": {
+          "sku": "TOO-1001"
+        },
+        "fields": {
+          "on_hand": 22
+        }
+      },
+      {
+        "list": "movements",
+        "where": {
+          "sku": "TOO-1001"
+        },
+        "fields": {
+          "change": 20,
+          "reason": "Received",
+          "note": "PO 4471"
+        }
+      }
+    ]
+  },
+  {
+    "name": "sell 5 x ELE-1015 (only 0 on hand)",
+    "operation": "adjust_stock",
+    "input": {
+      "sku": "ELE-1015",
+      "change": -5,
+      "reason": "Sold"
+    },
+    "expect": {
+      "status": "failed",
+      "error_code": "invalid_input"
+    }
+  },
+  {
+    "name": "create ELE-2001",
+    "operation": "create_product",
+    "input": {
+      "sku": "ELE-2001",
+      "name": "LED Bulb 9W",
+      "category": "Electrical",
+      "reorder_at": 12,
+      "location": "B-02-3",
+      "price": 3.49
+    },
+    "expect": {
+      "status": "succeeded",
+      "output": {
+        "created": true,
+        "sku": "ELE-2001"
+      }
+    },
+    "data": [
+      {
+        "list": "products",
+        "where": {
+          "sku": "ELE-2001"
+        },
+        "fields": {
+          "name": "LED Bulb 9W",
+          "category": "Electrical",
+          "reorder_at": 12,
+          "location": "B-02-3",
+          "price": 3.49,
+          "on_hand": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "create duplicate FAS-1008",
+    "operation": "create_product",
+    "input": {
+      "sku": "FAS-1008",
+      "name": "Duplicate",
+      "category": "Fasteners",
+      "reorder_at": 5,
+      "location": "A-01-1",
+      "price": 1
+    },
+    "expect": {
+      "status": "failed",
+      "error_code": "invalid_input"
+    }
+  }
+]

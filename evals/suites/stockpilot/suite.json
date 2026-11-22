@@ -1,0 +1,12 @@
+{
+  "project": "stockpilot-eval",
+  "app": {
+    "script": "test-target/stockpilot/stockpilot.py",
+    "data": "test-target/stockpilot/stockpilot.json",
+    "seed": "test-target/stockpilot/stockpilot.seed.json",
+    "startup_seconds": 4,
+    "window_title_contains": "StockPilot",
+    "description": "StockPilot inventory, products and stock movements."
+  },
+  "context": "Use StockPilot Inventory Manager. Open the registered stockpilot program if needed. It may show a Tip of the day window first: close it. Use the sidebar on the left to switch between Dashboard, Products and Stock movements. The Products list shows 15 products per page; the footer says how many match and which page you are on."
+}
