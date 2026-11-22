@@ -6,51 +6,30 @@ screenshots and drives the mouse and keyboard through the agent.
 
 ## Run
 
-### Docker on EC2
+### Docker (self-hosting)
 
-From the repository root on Windows:
+On any Linux server with Docker and Docker Compose:
 
-```powershell
-.\deploy.ps1
+```sh
+cd compute-box
+cp .env.example .env        # add OPENAI_KEY, or set SONIC_BRAIN=scripted to test without a model
+docker compose up --build --detach --wait
+docker compose exec compute-box cat /data/agent-token   # the token for your local-agents
 ```
 
-The script uploads only compute-box source to `~/sonic-sd-compute-box` and builds the
-multi-stage Docker image **on EC2**, using the instance's native architecture. Docker
-and Docker Compose must already be installed. The EC2 host, user and SSH key file come from `.env.secrets`
-at the repository root (copy `.env.secrets.example`); both scripts read it. Port defaults to 6080. Options include `-HostName`, `-UserName`, `-KeyPath`,
-`-RemoteDirectory`, `-Port`, and `-EnvironmentFile`.
+The box listens on port 6080 on all interfaces (`SONIC_PORT` and `SONIC_PUBLISH_ADDRESS`
+change that). Point the local-agent and `SONIC_URL` at `http://<server>:6080`; the
+dashboard is at `/` and health is at `/healthz`. Traffic is plain HTTP and the caller API
+has no authentication yet, so put it behind a firewall or an HTTPS reverse proxy before
+exposing it beyond a network you trust.
 
-On the first deployment, supported model/runtime settings are copied from local
-`compute-box/.env` over SCP into a mode-600 server `.env`. The OpenAI key is never added
-to the source archive or image. The local agent token, local paths and listen address
-are not copied. Later deployments preserve the server `.env`; pass `-UpdateEnvironment`
-explicitly to replace its model/runtime settings. The cloud agent token is generated
-separately and survives deployments in the named Docker data volume, alongside SQLite
-and screenshots. Do not remove that volume when updating the container.
-
-Port 6080 is published on all interfaces, so the box is reachable directly at
-`http://<host>:6080` (the EC2 security group must allow the port). Get the agent token with:
-
-```powershell
-.\connect.ps1 -AgentToken             # prints only the cloud agent token
-```
-
-Set the local-agent URL to `http://<host>:6080`, paste that cloud token, and use
-machine name `dentist-front-desk`. Set `$env:SONIC_URL = "http://<host>:6080"` in the
-terminal running the SDK/example backend, then restart that backend. Its installation
-paths still refer to the Windows machine; DentaSoft is not installed on EC2.
-The viewer is at `http://<host>:6080` and health is at `/healthz`. Traffic is plain HTTP
-and the caller API has no authentication yet. `.\connect.ps1 -Tunnel` still works if you
-want an SSH-encrypted path through `http://localhost:6080`.
-
-On EC2, use `cd ~/sonic-sd-compute-box` followed by `docker compose ps`,
-`docker compose logs -f compute-box`, or `docker compose restart compute-box` to inspect
-or restart it. `connect.ps1` without flags opens the existing tmux shell workflow.
+SQLite, screenshots and the agent token live in the named `data` volume; keep it when
+updating (`docker compose up --build --detach` replaces only the container). Use
+`docker compose logs -f compute-box` to follow logs.
 
 The image runs without root, has a read-only root filesystem, includes HTTPS CA roots,
 and stores writable data only in its volume. `/healthz` is used for container health
-checks. Compiler caching uses temporary memory during builds to reduce disk use on the
-small instance; the deploy script does not prune other projects' Docker images/caches.
+checks. The build keeps Go's compiler cache in memory, so it also fits small servers.
 
 ### Local Go process
 

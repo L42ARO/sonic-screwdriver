@@ -92,11 +92,11 @@ without a model, start the compute-box with `SONIC_BRAIN=scripted`.
 
 DentaSoft login: user `drsmith`, password `molar123`.
 
-## Cloud deployment
+## Self-hosting
 
-For EC2 deployment, run `./deploy.ps1`; the cloud box is then reachable at
-`http://<host>:6080`. See [the compute-box deployment instructions](compute-box/README.md#docker-on-ec2)
-for the agent token, SDK URL, environment settings and persistent Docker data volume.
+The compute-box ships as a Docker image. `docker compose up` in `compute-box/` runs it on
+any Linux server; see [the compute-box instructions](compute-box/README.md#docker-self-hosting)
+for the agent token, SDK URL, settings and the persistent data volume.
 
 ## Programs and installations
 
