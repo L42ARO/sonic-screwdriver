@@ -266,3 +266,65 @@ func TestCredentials(t *testing.T) {
 }
 
 func itoa(n int64) string { b, _ := json.Marshal(n); return string(b) }
+
+// The owner sets a password in the dashboard, then signs in with it; guessing is locked out.
+func TestPasswordSignIn(t *testing.T) {
+	box := newBox(t)
+	owner := newOwner(t, box.db)
+	u := box.srv.URL
+	noRedirect := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	post := func(path string, form url.Values, cookie string) *http.Response {
+		t.Helper()
+		req, _ := http.NewRequest("POST", u+path, strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", u)
+		if cookie != "" {
+			req.Header.Set("Cookie", cookie)
+		}
+		res, err := noRedirect.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	signIn := func(password string) *http.Response {
+		return post("/login", url.Values{"password": {password}}, "")
+	}
+
+	// No password yet: only links work, and the page says so.
+	if page := body(t, do(t, "GET", u+"/login", "", nil)); strings.Contains(page, `name="password"`) {
+		t.Fatal("password form shown before a password is set")
+	}
+	expect(t, signIn(""), 401, "Wrong password")
+
+	// Setting it: length and confirmation are checked; another browser gets signed out.
+	other, _ := box.db.CreateSession(context.Background(), owner.id, time.Hour)
+	expect(t, post("/dashboard/password", url.Values{"password": {"short"}, "confirm": {"short"}}, owner.cookie), 400, "at least")
+	expect(t, post("/dashboard/password", url.Values{"password": {"correct horse"}, "confirm": {"correct horsf"}}, owner.cookie), 400, "match")
+	expect(t, post("/dashboard/password", url.Values{"password": {"correct horse"}, "confirm": {"correct horse"}}, owner.cookie), 303, "")
+	expect(t, do(t, "GET", u+"/", "", map[string]string{"Cookie": owner.cookie}), 200, "Change password")
+	if _, ok, _ := box.db.UserBySession(context.Background(), other); ok {
+		t.Fatal("setting the password left other browsers signed in")
+	}
+	// Changing it needs the current one.
+	expect(t, post("/dashboard/password", url.Values{"current": {"guess"}, "password": {"new password!"}, "confirm": {"new password!"}}, owner.cookie), 400, "current password is wrong")
+
+	// Signing in with it.
+	expect(t, do(t, "GET", u+"/login", "", nil), 200, `name="password"`)
+	expect(t, signIn("wrong password"), 401, "Wrong password")
+	res := signIn("correct horse")
+	if res.StatusCode != 303 || !strings.HasPrefix(res.Header.Get("Set-Cookie"), "sonic_session=sonic_ss_") {
+		t.Fatalf("password sign-in: %d %v", res.StatusCode, res.Header)
+	}
+	session := strings.SplitN(res.Header.Get("Set-Cookie"), ";", 2)[0]
+	expect(t, do(t, "GET", u+"/", "", map[string]string{"Cookie": session}), 200, "API keys")
+
+	// Five wrong guesses lock the address out, even for the right password.
+	for range 5 {
+		expect(t, signIn("guess"), 401, "")
+	}
+	expect(t, signIn("correct horse"), 429, "Too many wrong passwords")
+	// A sign-in link still works during the lockout.
+	link, _ := box.db.CreateLoginToken(context.Background(), owner.id, time.Hour)
+	expect(t, post("/login", url.Values{"token": {link}}, ""), 303, "")
+}

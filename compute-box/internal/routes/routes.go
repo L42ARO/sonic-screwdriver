@@ -65,11 +65,21 @@ func New(d Deps) http.Handler {
 	mux.HandleFunc("POST /dashboard/machines/{machine}/remove", d.dashboard(d.removeMachine))
 	mux.HandleFunc("POST /dashboard/keys", d.dashboard(d.createAPIKey))
 	mux.HandleFunc("POST /dashboard/keys/{id}/revoke", d.dashboard(d.revokeAPIKey))
+	if d.ownerSignIn() {
+		mux.HandleFunc("POST /dashboard/password", d.dashboard(d.setPassword))
+	}
 
 	if d.Extra != nil {
 		d.Extra(mux)
 	}
 	return logRequests(mux)
+}
+
+// ownerSignIn reports whether the built-in owner sign-in (link or password) is in use,
+// rather than one supplied by an embedding program.
+func (d Deps) ownerSignIn() bool {
+	_, ok := d.SignIn.(OwnerLink)
+	return ok
 }
 
 func logRequests(next http.Handler) http.Handler {

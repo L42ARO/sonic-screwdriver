@@ -47,17 +47,21 @@ go run . login-link   # prints another one, even while the server runs
 
 ## Access
 
-A self-hosted compute-box has one owner. Three kinds of credentials, all created in the
-dashboard, shown once, and stored only as SHA-256 hashes:
+A self-hosted compute-box has one owner. The owner signs in to the dashboard with a
+password or a sign-in link; backends and agents use credentials created in the dashboard,
+shown once, and stored only as SHA-256 hashes:
 
 | Credential | Used by | How |
 |---|---|---|
-| Sign-in link | the owner's browser | Printed at startup or by `login-link`; works once, for 24 hours. Gives a 30-day session cookie. |
+| Sign-in link | the owner's browser | Printed at startup or by `login-link`; works once, for 24 hours. Gives a 30-day session cookie. Also the way back in if the password is forgotten. |
+| Password | the owner's browser | Set under **Sign-in password** in the dashboard (at least 10 characters; stored as salted PBKDF2-SHA256). Setting or changing it signs out other browsers. Five wrong tries lock the address out for 15 minutes. |
 | API key (`sonic_sk_…`) | backends and SDKs | **Create API key**; send as `Authorization: Bearer <key>` (the SDKs read `SONIC_API_KEY`). Revocable. |
 | Machine token (`sonic_mt_…`) | a local-agent | **Add machine**; the token identifies that machine. **Regenerate token** disconnects the agent using the old one; **Remove** deletes the machine (its job history stays). |
 
 Every request acts as the credential's owner: projects, machines, jobs, screenshots and
-model spend are scoped to them. Dashboard form posts must come from the dashboard itself.
+model spend are scoped to them. Dashboard form posts must come from the dashboard itself. Over plain HTTP, passwords and
+session cookies cross the network unencrypted; put the server behind HTTPS before relying
+on them on untrusted networks.
 Projects, operations and programs still change only through the API (the SDKs). The
 OpenAI key is never printed or sent to agents.
 

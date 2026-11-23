@@ -80,8 +80,11 @@ func (d Deps) viewerHome(w http.ResponseWriter, r *http.Request) {
 	jobs, _ := d.Store.ListJobs(ctx, uid, "", nil, 40)
 	keys, _ := d.Store.ListAPIKeys(ctx, uid)
 	spent, capUSD, _ := d.Ledger.Budget(ctx, uid)
+	hasPassword, _ := d.Store.HasPassword(ctx, uid)
 	web.Render(w, "home.html", map[string]any{
 		"Machines": machineViews, "Projects": projectViews, "Jobs": jobs, "Keys": keys,
+		"OwnerSignIn": d.ownerSignIn(), "HasPassword": hasPassword,
+		"PasswordSaved": r.URL.Query().Get("password") == "saved", "MinPassword": store.MinPasswordLength,
 		"Online": online, "Running": running, "Queued": queued, "Spent": spent, "Cap": capUSD,
 	})
 }

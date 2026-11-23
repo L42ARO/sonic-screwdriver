@@ -94,6 +94,24 @@
   </div>
 </section>
 
+{{if .OwnerSignIn}}
+<section id="account">
+  <h2 class="section">Sign-in password</h2>
+  <div class="card">
+    {{if .PasswordSaved}}<p class="s-succeeded">Password saved. Other browsers were signed out.</p>{{end}}
+    <p class="muted">{{if .HasPassword}}You sign in with this password. Sign-in links still work if you forget it.
+      {{else}}No password yet: you can only sign in with a single-use link. Set one to sign in with a password.{{end}}</p>
+    <form class="stack" method="post" action="/dashboard/password" style="max-width:320px">
+      <input type="text" name="username" value="owner" autocomplete="username" hidden>
+      {{if .HasPassword}}<label>Current password<input type="password" name="current" autocomplete="current-password" required></label>{{end}}
+      <label>New password (at least {{.MinPassword}} characters)<input type="password" name="password" autocomplete="new-password" minlength="{{.MinPassword}}" required></label>
+      <label>Repeat new password<input type="password" name="confirm" autocomplete="new-password" minlength="{{.MinPassword}}" required></label>
+      <button type="submit">{{if .HasPassword}}Change password{{else}}Set password{{end}}</button>
+    </form>
+  </div>
+</section>
+{{end}}
+
 <h2 class="section">Projects</h2>
 {{range .Projects}}
 <div class="card" id="project-{{.Name}}">

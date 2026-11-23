@@ -2,19 +2,28 @@
 {{template "head" "Sign in"}}
 <section class="card narrow">
   <h1>Sign in</h1>
-  {{if .Failed}}
-    <p class="s-failed">This sign-in link is invalid, expired or already used.</p>
-  {{end}}
+  {{if .LinkFailed}}<p class="s-failed">This sign-in link is invalid, expired or already used.</p>{{end}}
+  {{if .PasswordFailed}}<p class="s-failed">Wrong password.</p>{{end}}
+  {{if .Wait}}<p class="s-failed">Too many wrong passwords. Try again in about {{.Wait}}, or use a sign-in link.</p>{{end}}
   {{if .Token}}
     <p>Continue to the dashboard as the owner of this compute-box.</p>
     <form method="post" action="/login">
       <input type="hidden" name="token" value="{{.Token}}">
       <button class="primary" type="submit">Sign in</button>
     </form>
+  {{else if .HasPassword}}
+    <form class="stack" method="post" action="/login">
+      <input type="text" name="username" value="owner" autocomplete="username" hidden>
+      <label>Password<input type="password" name="password" autocomplete="current-password" required autofocus></label>
+      <button class="primary" type="submit">Sign in</button>
+    </form>
+    <p class="note">Forgot it? Sign in with a link (below) and set a new one.</p>
   {{else}}
     <p>Open the sign-in link the compute-box printed when it started. Each link works once
-       and expires after a day.</p>
-    <p class="muted">Need a new one? On the server run <code>compute-box login-link</code>,
+       and expires after a day. Once signed in, you can set a password.</p>
+  {{end}}
+  {{if not .Token}}
+    <p class="note">New sign-in link: on the server run <code>compute-box login-link</code>,
        or with Docker <code>docker compose exec compute-box /app/compute-box login-link</code>.</p>
   {{end}}
 </section>
