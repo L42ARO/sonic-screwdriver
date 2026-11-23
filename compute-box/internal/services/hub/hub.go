@@ -2,13 +2,11 @@ package hub
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,18 +22,23 @@ var ErrOffline = errors.New("machine is not connected")
 // ErrDisconnected means the connection dropped while an action was in flight.
 var ErrDisconnected = errors.New("machine disconnected")
 
+// Machine identifies a connected machine: names are unique per owner, not globally.
+type Machine struct {
+	User int64
+	Name string
+}
+
 type Hub struct {
 	store *store.Store
-	token string
 
 	mu      sync.Mutex
-	conns   map[string]*conn
+	conns   map[Machine]*conn
 	changed chan struct{} // closed and replaced whenever a machine connects or leaves
 }
 
 type conn struct {
 	instanceID string
-	machine    string
+	machine    Machine
 	screen     Screen
 	ws         *websocket.Conn
 	writeMu    sync.Mutex
@@ -46,8 +49,8 @@ type conn struct {
 	closed  chan struct{}
 }
 
-func New(s *store.Store, token string) *Hub {
-	return &Hub{store: s, token: token, conns: map[string]*conn{}, changed: make(chan struct{})}
+func New(s *store.Store) *Hub {
+	return &Hub{store: s, conns: map[Machine]*conn{}, changed: make(chan struct{})}
 }
 
 // ServeAgent upgrades a request to a WebSocket and serves one local-agent until it leaves.
@@ -63,43 +66,45 @@ func (h *Hub) ServeAgent(w http.ResponseWriter, r *http.Request) {
 	_, data, err := ws.Read(helloCtx)
 	cancel()
 	var hi hello
-	if err != nil || json.Unmarshal(data, &hi) != nil || hi.Type != "hello" || hi.Machine == "" {
+	if err != nil || json.Unmarshal(data, &hi) != nil || hi.Type != "hello" {
 		ws.Close(websocket.StatusPolicyViolation, "expected hello")
 		return
 	}
-	if subtle.ConstantTimeCompare([]byte(hi.Token), []byte(h.token)) != 1 {
-		writeJSON(ctx, ws, nil, map[string]string{"type": "error", "code": "authentication_failed", "message": "Agent token rejected. Check the token printed by the compute-box."})
+	// The machine token identifies both the owner and the machine; the hello's own
+	// "machine" field (sent by older agents) is ignored.
+	userID, name, ok, err := h.store.MachineByToken(ctx, hi.Token)
+	if err != nil || !ok {
+		if err != nil {
+			log.Printf("hub: looking up machine token: %v", err)
+		}
+		writeJSON(ctx, ws, nil, map[string]string{"type": "error", "code": "authentication_failed", "message": "Machine token rejected. Add the machine in the dashboard, or regenerate its token, and paste the new token."})
 		ws.Close(websocket.StatusPolicyViolation, "bad token")
 		return
 	}
-	if !regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]{0,63}$`).MatchString(hi.Machine) {
-		writeJSON(ctx, ws, nil, map[string]string{"type": "error", "code": "invalid_machine", "message": "Machine name must start with a letter and contain at most 64 letters, digits, underscores or hyphens."})
-		ws.Close(websocket.StatusPolicyViolation, "invalid machine name")
-		return
-	}
+	m := Machine{User: userID, Name: name}
 	if hi.Probe {
-		if existing := h.get(hi.Machine); existing != nil && (hi.InstanceID == "" || existing.instanceID != hi.InstanceID) {
-			writeJSON(ctx, ws, nil, map[string]string{"type": "error", "code": "machine_in_use", "message": "This machine name is already connected. Choose another name."})
+		if existing := h.get(m); existing != nil && (hi.InstanceID == "" || existing.instanceID != hi.InstanceID) {
+			writeJSON(ctx, ws, nil, map[string]string{"type": "error", "code": "machine_in_use", "message": "This machine is already connected from another agent."})
 		} else {
-			writeJSON(ctx, ws, nil, map[string]string{"type": "welcome"})
+			writeJSON(ctx, ws, nil, map[string]string{"type": "welcome", "machine": name})
 		}
 		ws.Close(websocket.StatusNormalClosure, "connection test complete")
 		return
 	}
-	c := &conn{machine: hi.Machine, instanceID: hi.InstanceID, screen: hi.Screen, ws: ws, pending: map[string]chan Result{}, closed: make(chan struct{})}
+	c := &conn{machine: m, instanceID: hi.InstanceID, screen: hi.Screen, ws: ws, pending: map[string]chan Result{}, closed: make(chan struct{})}
 	if !h.register(c) {
-		writeJSON(ctx, ws, nil, map[string]string{"type": "error", "code": "machine_in_use", "message": "This machine name is already connected. Choose another name or disconnect the other agent."})
-		ws.Close(websocket.StatusPolicyViolation, "machine name in use")
+		writeJSON(ctx, ws, nil, map[string]string{"type": "error", "code": "machine_in_use", "message": "This machine is already connected from another agent."})
+		ws.Close(websocket.StatusPolicyViolation, "machine in use")
 		return
 	}
 	defer h.unregister(c)
 	screen, _ := json.Marshal(hi.Screen)
-	if err := h.store.TouchMachine(ctx, h.store.UserID, hi.Machine, string(screen)); err != nil {
-		log.Printf("hub: recording machine %s: %v", hi.Machine, err)
+	if err := h.store.TouchMachine(ctx, userID, name, string(screen)); err != nil {
+		log.Printf("hub: recording machine %s: %v", name, err)
 	}
 
-	log.Printf("hub: %s connected (agent %s, screen %dx%d)", hi.Machine, hi.Version, hi.Screen.Width, hi.Screen.Height)
-	if err := writeJSON(ctx, ws, &c.writeMu, map[string]string{"type": "welcome"}); err != nil {
+	log.Printf("hub: %s (user %d) connected (agent %s, screen %dx%d)", name, userID, hi.Version, hi.Screen.Width, hi.Screen.Height)
+	if err := writeJSON(ctx, ws, &c.writeMu, map[string]string{"type": "welcome", "machine": name}); err != nil {
 		return
 	}
 
@@ -107,7 +112,7 @@ func (h *Hub) ServeAgent(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, data, err := ws.Read(ctx)
 		if err != nil {
-			log.Printf("hub: %s disconnected: %v", c.machine, err)
+			log.Printf("hub: %s (user %d) disconnected: %v", c.machine.Name, c.machine.User, err)
 			ws.CloseNow()
 			return
 		}
@@ -130,7 +135,7 @@ func (h *Hub) ServeAgent(w http.ResponseWriter, r *http.Request) {
 }
 
 // Do sends one action to a machine and waits for its result.
-func (h *Hub) Do(ctx context.Context, machine string, action json.RawMessage) (Result, error) {
+func (h *Hub) Do(ctx context.Context, machine Machine, action json.RawMessage) (Result, error) {
 	c := h.get(machine)
 	if c == nil {
 		return Result{}, ErrOffline
@@ -159,7 +164,7 @@ func (h *Hub) Do(ctx context.Context, machine string, action json.RawMessage) (R
 }
 
 // Tell sends a fire-and-forget message (job_start, status, job_end) for the overlay.
-func (h *Hub) Tell(machine string, msg any) {
+func (h *Hub) Tell(machine Machine, msg any) {
 	c := h.get(machine)
 	if c == nil {
 		return
@@ -170,10 +175,10 @@ func (h *Hub) Tell(machine string, msg any) {
 }
 
 // Online reports whether a machine is connected.
-func (h *Hub) Online(machine string) bool { return h.get(machine) != nil }
+func (h *Hub) Online(machine Machine) bool { return h.get(machine) != nil }
 
 // ScreenOf returns a connected machine's screenshot geometry.
-func (h *Hub) ScreenOf(machine string) (Screen, bool) {
+func (h *Hub) ScreenOf(machine Machine) (Screen, bool) {
 	if c := h.get(machine); c != nil {
 		return c.screen, true
 	}
@@ -181,7 +186,7 @@ func (h *Hub) ScreenOf(machine string) (Screen, bool) {
 }
 
 // WaitOnline blocks until the machine is connected or ctx ends.
-func (h *Hub) WaitOnline(ctx context.Context, machine string) bool {
+func (h *Hub) WaitOnline(ctx context.Context, machine Machine) bool {
 	for {
 		h.mu.Lock()
 		_, ok := h.conns[machine]
@@ -198,7 +203,15 @@ func (h *Hub) WaitOnline(ctx context.Context, machine string) bool {
 	}
 }
 
-func (h *Hub) get(machine string) *conn {
+// Disconnect closes a machine's live connection, e.g. after its token was replaced or the
+// machine was removed. The agent's reconnect then fails until it has a valid token.
+func (h *Hub) Disconnect(machine Machine) {
+	if c := h.get(machine); c != nil {
+		c.ws.CloseNow() // immediate: a close handshake would wait on an unresponsive agent
+	}
+}
+
+func (h *Hub) get(machine Machine) *conn {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.conns[machine]

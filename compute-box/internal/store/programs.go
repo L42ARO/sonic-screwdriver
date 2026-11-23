@@ -22,40 +22,40 @@ type InstalledProgram struct {
 	StartupTimeoutMS    int      `json:"startup_timeout_ms,omitempty"`
 }
 
-func (s *Store) SetProjectPrograms(ctx context.Context, project string, programs map[string]Program) error {
+func (s *Store) SetProjectPrograms(ctx context.Context, userID int64, project string, programs map[string]Program) error {
 	definitions := map[string]any{}
 	for k, v := range programs {
 		definitions[k] = v
 	}
-	return s.setPrograms(ctx, "project", project, definitions)
+	return s.setPrograms(ctx, userID, "project", project, definitions)
 }
 
-func (s *Store) SetMachinePrograms(ctx context.Context, machine string, programs map[string]InstalledProgram) error {
+func (s *Store) SetMachinePrograms(ctx context.Context, userID int64, machine string, programs map[string]InstalledProgram) error {
 	definitions := map[string]any{}
 	for k, v := range programs {
 		definitions[k] = v
 	}
-	return s.setPrograms(ctx, "machine", machine, definitions)
+	return s.setPrograms(ctx, userID, "machine", machine, definitions)
 }
 
 // setPrograms replaces only the selected owner's program configuration, atomically.
 // kind is an internal constant, never request input.
-func (s *Store) setPrograms(ctx context.Context, kind, name string, definitions map[string]any) error {
+func (s *Store) setPrograms(ctx context.Context, userID int64, kind, name string, definitions map[string]any) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 	if kind == "project" {
-		_, err = tx.ExecContext(ctx, `INSERT INTO projects (user_id,name,created_at) VALUES (?,?,?) ON CONFLICT DO NOTHING`, s.UserID, name, utils.Now())
+		_, err = tx.ExecContext(ctx, `INSERT INTO projects (user_id,name,created_at) VALUES (?,?,?) ON CONFLICT DO NOTHING`, userID, name, utils.Now())
 	} else {
-		_, err = tx.ExecContext(ctx, `INSERT INTO machines (user_id,name) VALUES (?,?) ON CONFLICT DO NOTHING`, s.UserID, name)
+		_, err = tx.ExecContext(ctx, `INSERT INTO machines (user_id,name) VALUES (?,?) ON CONFLICT DO NOTHING`, userID, name)
 	}
 	if err != nil {
 		return err
 	}
 	var id int64
-	if err = tx.QueryRowContext(ctx, "SELECT id FROM "+kind+"s WHERE user_id=? AND name=?", s.UserID, name).Scan(&id); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT id FROM "+kind+"s WHERE user_id=? AND name=?", userID, name).Scan(&id); err != nil {
 		return err
 	}
 	table, column := kind+"_programs", kind+"_id"
@@ -74,8 +74,8 @@ func (s *Store) setPrograms(ctx context.Context, kind, name string, definitions 
 	return tx.Commit()
 }
 
-func readPrograms[T any](ctx context.Context, s *Store, kind, name string) (map[string]T, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT p.name,p.definition FROM "+kind+"_programs p JOIN "+kind+"s o ON o.id=p."+kind+"_id WHERE o.user_id=? AND o.name=? ORDER BY p.name", s.UserID, name)
+func readPrograms[T any](ctx context.Context, s *Store, userID int64, kind, name string) (map[string]T, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT p.name,p.definition FROM "+kind+"_programs p JOIN "+kind+"s o ON o.id=p."+kind+"_id WHERE o.user_id=? AND o.name=? ORDER BY p.name", userID, name)
 	if err != nil {
 		return nil, err
 	}
@@ -95,9 +95,9 @@ func readPrograms[T any](ctx context.Context, s *Store, kind, name string) (map[
 	return out, rows.Err()
 }
 
-func (s *Store) ProjectPrograms(ctx context.Context, project string) (map[string]Program, error) {
-	return readPrograms[Program](ctx, s, "project", project)
+func (s *Store) ProjectPrograms(ctx context.Context, userID int64, project string) (map[string]Program, error) {
+	return readPrograms[Program](ctx, s, userID, "project", project)
 }
-func (s *Store) MachinePrograms(ctx context.Context, machine string) (map[string]InstalledProgram, error) {
-	return readPrograms[InstalledProgram](ctx, s, "machine", machine)
+func (s *Store) MachinePrograms(ctx context.Context, userID int64, machine string) (map[string]InstalledProgram, error) {
+	return readPrograms[InstalledProgram](ctx, s, userID, "machine", machine)
 }

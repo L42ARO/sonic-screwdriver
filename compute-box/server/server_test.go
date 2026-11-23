@@ -5,9 +5,11 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/cookiejar"
 	"testing"
 	"time"
 
+	"github.com/L42ARO/sonic-screwdriver/compute-box/ext"
 	"github.com/L42ARO/sonic-screwdriver/compute-box/server"
 )
 
@@ -61,5 +63,55 @@ func TestRunServesExtraRoutesAndStopsOnCancel(t *testing.T) {
 		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("Run did not stop after cancel")
+	}
+}
+
+// customSignIn stands in for a hosted sign-in (e.g. GitHub): it creates a user by name
+// and starts a session for them.
+type customSignIn struct{}
+
+func (customSignIn) LoginPath() string { return "/hosted/login" }
+func (customSignIn) Mount(mux *http.ServeMux, acc ext.Accounts) {
+	mux.HandleFunc("GET /hosted/login", func(w http.ResponseWriter, r *http.Request) {
+		user, err := acc.EnsureUser(r.Context(), "github:"+r.URL.Query().Get("as"))
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		acc.StartSession(w, r, user)
+	})
+}
+
+// An embedding program can replace how people sign in; the default link sign-in is gone.
+func TestCustomSignInReplacesTheDefault(t *testing.T) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := l.Addr().String()
+	l.Close()
+	cfg := server.Config{Addr: addr, DataDir: t.TempDir(), Brain: "scripted", ScriptsDir: t.TempDir(), JobTimeout: time.Minute, MaxSteps: 10}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go server.Run(ctx, server.Options{Config: cfg, SignIn: customSignIn{}})
+
+	noRedirect := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	var res *http.Response
+	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
+		if res, err = noRedirect.Get("http://" + addr + "/"); err == nil {
+			break
+		}
+	}
+	if err != nil || res.StatusCode != 303 || res.Header.Get("Location") != "/hosted/login" {
+		t.Fatalf("signed-out visitors should go to the custom sign-in: %v %v", res, err)
+	}
+	if res, _ := http.Get("http://" + addr + "/login"); res.StatusCode != 404 {
+		t.Fatalf("default sign-in still mounted: %d", res.StatusCode)
+	}
+	jar, _ := cookiejar.New(nil)
+	browser := &http.Client{Jar: jar}
+	res, err = browser.Get("http://" + addr + "/hosted/login?as=octocat")
+	if err != nil || res.StatusCode != 200 || res.Request.URL.Path != "/" {
+		t.Fatalf("custom sign-in did not land on the dashboard: %v %v", res, err)
 	}
 }

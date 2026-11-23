@@ -3,8 +3,8 @@
 //
 // Wire protocol (JSON text messages):
 //
-//	agent -> box  {"type":"hello","machine":"...","token":"...","version":"...","screen":{...}}
-//	box -> agent  {"type":"welcome"}  or  {"type":"error","message":"..."} then close
+//	agent -> box  {"type":"hello","token":"<machine token>","version":"...","screen":{...}}
+//	box -> agent  {"type":"welcome","machine":"<name>"}  or  {"type":"error","code":"...","message":"..."} then close
 //	box -> agent  {"type":"action","id":"a-1","action":{"action":"click","x":10,"y":20}}
 //	agent -> box  {"type":"result","id":"a-1","result":{...ActionResult...}}
 //	box -> agent  {"type":"job_start","job_id":"...","operation":"..."}

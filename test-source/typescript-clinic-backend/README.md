@@ -45,6 +45,7 @@ Node 24 runs TypeScript directly, so there is no build step:
 ```powershell
 npm install
 $env:SONIC_URL = "http://localhost:8080"
+$env:SONIC_API_KEY = "sonic_sk_..."   # from the dashboard: Create API key
 npm start            # node main.ts
 npm run check        # type-check with tsc
 ```

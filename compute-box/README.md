@@ -14,16 +14,23 @@ On any Linux server with Docker and Docker Compose:
 cd compute-box
 cp .env.example .env        # add OPENAI_KEY, or set SONIC_BRAIN=scripted to test without a model
 docker compose up --build --detach --wait
-docker compose exec compute-box cat /data/agent-token   # the token for your local-agents
+docker compose logs compute-box | grep -A1 "sign-in link"   # open it to sign in
 ```
 
 The box listens on port 6080 on all interfaces (`SONIC_PORT` and `SONIC_PUBLISH_ADDRESS`
-change that). Point the local-agent and `SONIC_URL` at `http://<server>:6080`; the
-dashboard is at `/` and health is at `/healthz`. Traffic is plain HTTP and the caller API
-has no authentication yet, so put it behind a firewall or an HTTPS reverse proxy before
-exposing it beyond a network you trust.
+change that). Set `SONIC_PUBLIC_URL` in `.env` (e.g. `http://my-server:6080`) so printed
+sign-in links point at the right address. The dashboard is at `/` and health is at
+`/healthz`. Traffic is plain HTTP unless you put an HTTPS reverse proxy in front (forward
+the `/v1/agent` WebSocket route with upgrade support); credentials and screenshots then
+travel encrypted.
 
-SQLite, screenshots and the agent token live in the named `data` volume; keep it when
+A new sign-in link (works once, for 24 hours):
+
+```sh
+docker compose exec compute-box /app/compute-box login-link
+```
+
+SQLite, screenshots and credentials live in the named `data` volume; keep it when
 updating (`docker compose up --build --detach` replaces only the container). Use
 `docker compose logs -f compute-box` to follow logs.
 
@@ -34,32 +41,28 @@ checks. The build keeps Go's compiler cache in memory, so it also fits small ser
 ### Local Go process
 
 ```powershell
-go run .
+go run .              # prints a dashboard sign-in link
+go run . login-link   # prints another one, even while the server runs
 ```
 
-Then open http://127.0.0.1:8080 for the job viewer. Start a local-agent with
-the local-agent executable and configure its URL, machine name and the agent token printed
-at server startup so jobs have somewhere to run.
+## Access
 
-On first startup the box generates a 256-bit agent token and saves it to
-`SONIC_DATA_DIR/agent-token`. The same token is printed every startup. This secret is
-independent of `OPENAI_KEY`, which is never printed or sent to agents. Preserve the data
-directory across container/server restarts. `SONIC_AGENT_TOKEN` overrides the saved token.
+A self-hosted compute-box has one owner. Three kinds of credentials, all created in the
+dashboard, shown once, and stored only as SHA-256 hashes:
 
-To explicitly rotate a generated token:
+| Credential | Used by | How |
+|---|---|---|
+| Sign-in link | the owner's browser | Printed at startup or by `login-link`; works once, for 24 hours. Gives a 30-day session cookie. |
+| API key (`sonic_sk_…`) | backends and SDKs | **Create API key**; send as `Authorization: Bearer <key>` (the SDKs read `SONIC_API_KEY`). Revocable. |
+| Machine token (`sonic_mt_…`) | a local-agent | **Add machine**; the token identifies that machine. **Regenerate token** disconnects the agent using the old one; **Remove** deletes the machine (its job history stays). |
 
-```powershell
-go run . rotate-agent-token
-```
+Every request acts as the credential's owner: projects, machines, jobs, screenshots and
+model spend are scoped to them. Dashboard form posts must come from the dashboard itself.
+Projects, operations and programs still change only through the API (the SDKs). The
+OpenAI key is never printed or sent to agents.
 
-Restart the box after rotation and update local-agent settings. If an environment/.env
-override is active, change that override instead. A malformed saved token fails startup
-rather than silently disconnecting agents by generating another token.
-
-For a cloud deployment, terminate HTTPS/WSS at a reverse proxy and forward the agent
-WebSocket route to the box, including WebSocket upgrade support. The local agent connects
-outbound; it needs no inbound port. This prototype still uses one shared agent token and
-one owner; adding TLS does not add caller API authorization or per-machine enrollment.
+Programs that embed the compute-box (see [Embedding](#embedding)) can replace how people
+sign in and how much each user may spend, through the interfaces in package `ext`.
 
 ## Settings
 
@@ -71,10 +74,10 @@ Read from the environment, then `.env` (the environment wins).
 | `SONIC_MODEL` | `gpt-6-luna` | Model for the OpenAI brain. Only priced models are accepted. |
 | `SONIC_REASONING` | model default | Reasoning effort sent to the model. |
 | `SONIC_BRAIN` | `openai` | `scripted` replays `scripts/<operation>.json` instead of using a model. |
-| `SONIC_BUDGET_USD` | `3.00` | Hard cap on total model spend. New model calls are refused past it. |
+| `SONIC_BUDGET_USD` | `3.00` | Model spend cap per user (0 = none). Their new model calls are refused past it. |
 | `SONIC_NTFY_TOPIC` | | ntfy.sh topic for alerts (budget cap reached). |
 | `SONIC_ADDR` | `127.0.0.1:8080` | Listen address. Localhost only unless changed. |
-| `SONIC_AGENT_TOKEN` | generated and persisted | Override for the shared agent authentication token. Printed at startup; unrelated to the OpenAI key. |
+| `SONIC_PUBLIC_URL` | from `SONIC_ADDR` | How people reach this server, used in printed sign-in links. |
 | `SONIC_DATA_DIR` | `data` | SQLite database and job screenshots. |
 | `SONIC_JOB_TIMEOUT` | `10m` | A job running longer fails with `timeout`. |
 | `SONIC_MAX_STEPS` | `40` | Most screen actions one job may take. |
@@ -100,6 +103,9 @@ scripts/                    fixtures for the scripted brain
 ```
 
 ## Caller API
+
+Every call needs `Authorization: Bearer <api key>`; without a valid key it returns `401`
+`{"error": {"code": "unauthorized", ...}}`. Everything is scoped to the key's owner.
 
 | Call | Purpose |
 |---|---|

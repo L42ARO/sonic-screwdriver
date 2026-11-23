@@ -37,7 +37,6 @@ const WARNING_TEXT: u32 = 0x00_1a_6b_b4;
 const PLAIN_WARNING: &str = "Unencrypted: the token and screenshots travel in plain text.";
 const TRAY: u32 = WM_APP + 1;
 const URL: i32 = 101;
-const MACHINE: i32 = 102;
 const TOKEN: i32 = 103;
 const CHECK: i32 = 104;
 const TEST: i32 = 105;
@@ -57,7 +56,6 @@ struct Ui {
     warning: HWND,
     header: HWND,
     url: HWND,
-    machine: HWND,
     token: HWND,
     checkbox: HWND,
     checked: bool,
@@ -87,25 +85,7 @@ pub fn run() -> Result<()> {
         }
     });
     let needs_setup = connection.is_none();
-    let mut draft = profile.clone().unwrap_or(Profile::new()?);
-    if draft.machine.is_empty() {
-        let name = std::env::var("COMPUTERNAME")
-            .unwrap_or("my-machine".into())
-            .to_lowercase();
-        draft.machine = name
-            .chars()
-            .map(|c| {
-                if c.is_ascii_alphanumeric() || c == '-' {
-                    c
-                } else {
-                    '-'
-                }
-            })
-            .collect();
-        if settings::validate_machine(&draft.machine).is_err() {
-            draft.machine = "my-machine".into()
-        }
-    }
+    let draft = profile.clone().unwrap_or(Profile::new()?);
     let controller = agent::Controller::start(connection)?;
     let mut ui = Box::new(Ui {
         controller,
@@ -116,7 +96,6 @@ pub fn run() -> Result<()> {
         warning: null_mut(),
         header: null_mut(),
         url: null_mut(),
-        machine: null_mut(),
         token: null_mut(),
         checkbox: null_mut(),
         checked: false,
@@ -141,7 +120,7 @@ pub fn run() -> Result<()> {
             return Err(std::io::Error::last_os_error()).context("Registering setup window");
         }
         let width = 460;
-        let height = 496;
+        let height = 426;
         let hwnd = CreateWindowExW(
             WS_EX_CONTROLPARENT,
             class.as_ptr(),
@@ -255,8 +234,7 @@ unsafe fn build_controls(ui: &mut Ui) {
         ui.header = control(ui, "STATIC", "Connect", 0, 28, 22, 388, 36, 0, 1);
         for (label, y) in [
             ("Server URL", 72),
-            ("Machine name", 168),
-            ("Agent token", 238),
+            ("Machine token", 168),
         ] {
             control(ui, "STATIC", label, 0, 28, y, 388, 20, 0, 2);
         }
@@ -272,31 +250,19 @@ unsafe fn build_controls(ui: &mut Ui) {
             WS_TABSTOP | ES_AUTOHSCROLL as u32,
             0,
         );
-        ui.machine = control(
-            ui,
-            "EDIT",
-            "",
-            MACHINE,
-            28,
-            190,
-            388,
-            32,
-            WS_TABSTOP | ES_AUTOHSCROLL as u32,
-            0,
-        );
         ui.token = control(
             ui,
             "EDIT",
             "",
             TOKEN,
             28,
-            260,
+            190,
             388,
             32,
             WS_TABSTOP | ES_AUTOHSCROLL as u32 | ES_PASSWORD as u32,
             0,
         );
-        for edit in [ui.url, ui.machine, ui.token] {
+        for edit in [ui.url, ui.token] {
             SendMessageW(edit, EM_SETMARGINS, 3, 10 | (10 << 16));
         }
         ui.checkbox = control(
@@ -305,7 +271,7 @@ unsafe fn build_controls(ui: &mut Ui) {
             "Start at sign-in",
             CHECK,
             28,
-            306,
+            236,
             388,
             28,
             WS_TABSTOP | BS_OWNERDRAW as u32,
@@ -317,7 +283,7 @@ unsafe fn build_controls(ui: &mut Ui) {
             "Test",
             TEST,
             28,
-            350,
+            280,
             132,
             36,
             WS_TABSTOP | BS_OWNERDRAW as u32,
@@ -329,14 +295,14 @@ unsafe fn build_controls(ui: &mut Ui) {
             "Connect",
             SAVE,
             176,
-            350,
+            280,
             240,
             36,
             WS_TABSTOP | BS_OWNERDRAW as u32,
             3,
         );
         ui.warning = control(ui, "STATIC", "", 0, 28, 130, 388, 20, 0, 2);
-        ui.status = control(ui, "STATIC", "", 0, 28, 402, 388, 48, 0, 2);
+        ui.status = control(ui, "STATIC", "", 0, 28, 332, 388, 48, 0, 2);
     }
 }
 
@@ -347,7 +313,6 @@ unsafe fn populate(ui: &mut Ui) {
         }
         SetWindowTextW(ui.url, wide(&ui.draft.server_url).as_ptr());
         update_warning(ui);
-        SetWindowTextW(ui.machine, wide(&ui.draft.machine).as_ptr());
         SetWindowTextW(ui.token, wide("").as_ptr());
         ui.checked = ui.draft.start_at_signin;
         SetWindowTextW(
@@ -392,7 +357,6 @@ unsafe fn candidate(ui: &Ui) -> Result<(Profile, String, agent::Settings)> {
     unsafe {
         let mut p = ui.draft.clone();
         p.server_url = text(ui.url).trim().into();
-        p.machine = text(ui.machine).trim().into();
         p.start_at_signin = ui.checked;
         let entered = text(ui.token);
         let token = if entered.trim().is_empty() {
@@ -536,11 +500,7 @@ unsafe fn menu(ui: &mut Ui) {
     unsafe {
         let state = ui.controller.status();
         let menu = CreatePopupMenu();
-        let status = if let Some(p) = &ui.profile {
-            format!("{} · {}", p.machine, state.message)
-        } else {
-            state.message.clone()
-        };
+        let status = state.message.clone();
         AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, wide(&status).as_ptr());
         AppendMenuW(menu, MF_SEPARATOR, 0, null());
         AppendMenuW(
@@ -749,7 +709,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, message: u32, wp: WPARAM, lp: LPAR
                 } else if (wp >> 16) as u32 == EN_CHANGE && (wp & 0xffff) as i32 == URL {
                     update_warning(ui);
                 } else if matches!((wp >> 16) as u32, EN_SETFOCUS | EN_KILLFOCUS) {
-                    for edit in [ui.url, ui.machine, ui.token] {
+                    for edit in [ui.url, ui.token] {
                         InvalidateRect(edit, null(), 1);
                     }
                 }

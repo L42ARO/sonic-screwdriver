@@ -54,10 +54,22 @@
   .text { white-space: pre-wrap; margin: 6px 0 0; }
   .note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
   [hidden] { display: none !important; }
+  nav { display:flex; justify-content:space-between; align-items:center; }
+  form.inline { display:inline-flex; gap:6px; margin:0; }
+  .actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; } .actions form { margin:0; }
+  input { font: inherit; font-size:13px; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:4px 8px; min-width:0; }
+  button { font: inherit; font-size:13px; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer; }
+  button:hover { border-color: var(--muted); }
+  button.primary { background:var(--fg); color:var(--bg); border-color:var(--fg); padding:8px 16px; }
+  button.danger { color: var(--bad); }
+  button.link { border:0; background:none; color:var(--muted); padding:0; } button.link:hover { color:var(--fg); }
+  .narrow { max-width: 560px; margin: 24px auto; }
+  .secret { display:flex; gap:8px; align-items:center; margin:16px 0; padding:12px; border:1px solid var(--line); border-radius:6px; background:var(--bg); }
+  .secret code { flex:1; font-size:13px; overflow-wrap:anywhere; user-select:all; }
 </style>
 </head>
 <body><main>
-<nav><a href="/">sonic-screwdriver</a></nav>
+<nav><a href="/">sonic-screwdriver</a>{{if ne . "Sign in"}}<form class="inline" method="post" action="/logout"><button type="submit" class="link">Sign out</button></form>{{end}}</nav>
 {{end}}
 
 {{define "foot"}}

@@ -93,16 +93,16 @@ func (e *env) dispatch(ctx context.Context, action json.RawMessage) (hub.Result,
 		if err != nil {
 			return hub.Result{}, err
 		}
-		res, err := e.svc.hub.Do(ctx, e.job.Machine, raw)
+		res, err := e.svc.hub.Do(ctx, machineOf(e.job), raw)
 		res.Action = a.Action
 		return res, err
 	default:
-		return e.svc.hub.Do(ctx, e.job.Machine, action)
+		return e.svc.hub.Do(ctx, machineOf(e.job), action)
 	}
 }
 
 func (e *env) Status(text string) {
-	e.svc.hub.Tell(e.job.Machine, map[string]string{"type": "status", "text": text})
+	e.svc.hub.Tell(machineOf(e.job), map[string]string{"type": "status", "text": text})
 }
 
 func (e *env) saveScreenshot(n int, b64 string) (string, error) {

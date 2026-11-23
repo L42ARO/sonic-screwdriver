@@ -28,7 +28,8 @@ func TestProgramConfigurationAndLaunchResolution(t *testing.T) {
 	if err := os.MkdirAll(scripts, 0755); err != nil {
 		t.Fatal(err)
 	}
-	h := hub.New(db, "secret")
+	h := hub.New(db)
+	owner := newOwner(t, db)
 	js := jobs.New(db, h, &brain.Scripted{Dir: scripts}, jobs.Options{JobTimeout: time.Second * 10, MaxSteps: 10, ScreensDir: dir})
 	srv := httptest.NewServer(routes.New(routes.Deps{Store: db, Hub: h, Jobs: js, ScreensDir: dir}))
 	defer srv.Close()
@@ -52,8 +53,8 @@ func TestProgramConfigurationAndLaunchResolution(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	actions := make(chan string, 30)
-	go fakeAgent(t, ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/v1/agent", actions)
-	waitFor(t, func() bool { return h.Online("dentist-front-desk") })
+	go fakeAgent(t, ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/v1/agent", owner.machineToken, actions)
+	waitFor(t, func() bool { return h.Online(hub.Machine{User: owner.id, Name: "dentist-front-desk"}) })
 	expect(t, do(t, "GET", machineURL, "", nil), 200, `C:\\Apps`)
 
 	writeScript := func(action string) {
@@ -104,7 +105,7 @@ func TestProgramConfigurationAndLaunchResolution(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer other.Close()
-	saved, err := other.MachinePrograms(context.Background(), "dentist-front-desk")
+	saved, err := other.MachinePrograms(context.Background(), other.DefaultUserID(), "dentist-front-desk")
 	if err != nil || saved["dentasoft"].Executable != `C:\Apps\DentaSoft.exe` {
 		t.Fatalf("persistence: %v %v", saved, err)
 	}

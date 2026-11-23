@@ -56,6 +56,7 @@ status.
 
 ```powershell
 $env:SONIC_URL = "http://localhost:8080"
+$env:SONIC_API_KEY = "sonic_sk_..."   # from the dashboard: Create API key
 go run .
 ```
 

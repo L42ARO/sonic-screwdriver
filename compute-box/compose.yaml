@@ -10,6 +10,7 @@ services:
       SONIC_ADDR: 0.0.0.0:8080
       SONIC_DATA_DIR: /data
       SONIC_SCRIPTS_DIR: /app/scripts
+      SONIC_PUBLIC_URL: ${SONIC_PUBLIC_URL:-}
     ports:
       - "${SONIC_PUBLISH_ADDRESS:-0.0.0.0}:${SONIC_PORT:-6080}:8080"
     volumes:

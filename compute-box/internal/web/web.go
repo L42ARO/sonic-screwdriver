@@ -19,7 +19,23 @@ var pages = template.Must(template.New("").Funcs(template.FuncMap{
 	"ago":    ago,
 	"money":  func(v float64) string { return fmt.Sprintf("$%.4f", v) },
 	"pretty": pretty,
+	"screen": screen,
 }).ParseFS(files, "templates/*.html"))
+
+// screen turns a stored screen geometry ({"width","height","scale"}) into "1280×720 (scale 1.5)".
+func screen(raw string) string {
+	var g struct {
+		Width, Height int
+		Scale         float64
+	}
+	if json.Unmarshal([]byte(raw), &g) != nil || g.Width == 0 {
+		return raw
+	}
+	if g.Scale == 0 || g.Scale == 1 {
+		return fmt.Sprintf("%d×%d", g.Width, g.Height)
+	}
+	return fmt.Sprintf("%d×%d (scale %g)", g.Width, g.Height, g.Scale)
+}
 
 // pretty indents a JSON document for display; anything else is shown as-is.
 func pretty(raw json.RawMessage) string {

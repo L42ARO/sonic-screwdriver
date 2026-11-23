@@ -13,6 +13,7 @@ import (
 
 // Task is one job as a brain sees it.
 type Task struct {
+	UserID     int64 // owner of the job; model usage is charged to them
 	JobID      string
 	Project    string
 	Definition store.Definition

@@ -30,7 +30,7 @@ type Service struct {
 
 	streams streams
 	mu      sync.Mutex
-	queues  map[string]*queue
+	queues  map[hub.Machine]*queue
 }
 
 type Options struct {
@@ -44,7 +44,7 @@ func New(s *store.Store, h *hub.Hub, b brain.Brain, opt Options) *Service {
 		store: s, hub: h, brain: b,
 		screensDir: opt.ScreensDir, jobTimeout: opt.JobTimeout, maxSteps: opt.MaxSteps,
 		streams: streams{byID: map[string]*stream{}},
-		queues:  map[string]*queue{},
+		queues:  map[hub.Machine]*queue{},
 	}
 }
 
@@ -55,14 +55,13 @@ func (s *Service) Recover(ctx context.Context) error {
 	} else if n > 0 {
 		log.Printf("jobs: %d job(s) were running when the compute-box stopped; marked failed", n)
 	}
-	queued, err := s.store.ListJobs(ctx, s.store.UserID, "", []string{store.StatusQueued}, 1000)
+	queued, err := s.store.QueuedJobs(ctx) // every user's, oldest first
 	if err != nil {
 		return err
 	}
-	for i := len(queued) - 1; i >= 0; i-- { // oldest first
-		j := queued[i]
+	for _, j := range queued {
 		s.streams.create(j.ID).publish(Event{"queued", map[string]any{"job_id": j.ID}}, false)
-		s.queueFor(j.Machine).push(j)
+		s.queueFor(machineOf(j)).push(j)
 	}
 	return nil
 }
@@ -78,8 +77,7 @@ type Submission struct {
 
 // Submit validates and queues a job. With an idempotency key that was used before, it
 // returns the original job instead of creating another.
-func (s *Service) Submit(ctx context.Context, sub Submission) (*store.Job, error) {
-	userID := s.store.UserID
+func (s *Service) Submit(ctx context.Context, userID int64, sub Submission) (*store.Job, error) {
 	if sub.IdempotencyKey != "" {
 		if j, err := s.store.JobByIdempotencyKey(ctx, userID, sub.IdempotencyKey); err != nil {
 			return nil, err
@@ -108,7 +106,7 @@ func (s *Service) Submit(ctx context.Context, sub Submission) (*store.Job, error
 	if err := utils.Validate("input", def.Input, sub.Input); err != nil {
 		return nil, utils.NewError(http.StatusUnprocessableEntity, "invalid_input", err.Error())
 	}
-	if !s.hub.Online(sub.Machine) {
+	if !s.hub.Online(hub.Machine{User: userID, Name: sub.Machine}) {
 		return nil, utils.NewError(http.StatusServiceUnavailable, "machine_offline", sub.Machine+" is not connected")
 	}
 
@@ -122,24 +120,25 @@ func (s *Service) Submit(ctx context.Context, sub Submission) (*store.Job, error
 		return nil, err
 	}
 	s.streams.create(j.ID).publish(Event{"queued", map[string]any{"job_id": j.ID}}, false)
-	s.queueFor(j.Machine).push(j)
+	s.queueFor(machineOf(j)).push(j)
 	log.Printf("jobs: %s queued: %s/%s on %s", j.ID, j.Project, j.Operation, j.Machine)
 	return j, nil
 }
 
 // Subscribe returns a job's events so far and a channel of the rest. For a job that
-// finished before this process started, it rebuilds the events from the database.
-func (s *Service) Subscribe(ctx context.Context, jobID string) ([]Event, <-chan Event, func(), error) {
-	if st := s.streams.get(jobID); st != nil {
-		h, ch, cancel := st.subscribe()
-		return h, ch, cancel, nil
-	}
-	j, err := s.store.GetJob(ctx, s.store.UserID, jobID)
+// finished before this process started, it rebuilds the events from the database. Only
+// the job's owner can subscribe.
+func (s *Service) Subscribe(ctx context.Context, userID int64, jobID string) ([]Event, <-chan Event, func(), error) {
+	j, err := s.store.GetJob(ctx, userID, jobID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	if j == nil {
 		return nil, nil, nil, utils.NewError(http.StatusNotFound, "not_found", "no job "+jobID)
+	}
+	if st := s.streams.get(jobID); st != nil {
+		h, ch, cancel := st.subscribe()
+		return h, ch, cancel, nil
 	}
 	steps, err := s.store.ListSteps(ctx, jobID)
 	if err != nil {
@@ -158,11 +157,13 @@ func (s *Service) Subscribe(ctx context.Context, jobID string) ([]Event, <-chan 
 }
 
 // QueuedFor lists the job ids waiting on a machine, oldest first.
-func (s *Service) QueuedFor(machine string) []string {
+func (s *Service) QueuedFor(machine hub.Machine) []string {
 	return s.queueFor(machine).ids()
 }
 
-func (s *Service) queueFor(machine string) *queue {
+func machineOf(j *store.Job) hub.Machine { return hub.Machine{User: j.UserID, Name: j.Machine} }
+
+func (s *Service) queueFor(machine hub.Machine) *queue {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	q := s.queues[machine]
@@ -175,7 +176,7 @@ func (s *Service) queueFor(machine string) *queue {
 }
 
 // work runs one machine's jobs, one at a time, forever.
-func (s *Service) work(machine string, q *queue) {
+func (s *Service) work(machine hub.Machine, q *queue) {
 	for {
 		j := q.pop()
 		s.run(j)
@@ -192,7 +193,8 @@ func (s *Service) run(j *store.Job) {
 
 	// The machine may have dropped while the job waited; give it a moment to come back.
 	waitCtx, waitCancel := context.WithTimeout(ctx, reconnectGrace)
-	online := s.hub.WaitOnline(waitCtx, j.Machine)
+	m := machineOf(j)
+	online := s.hub.WaitOnline(waitCtx, m)
 	waitCancel()
 	if !online {
 		s.finish(j, st, nil, &brain.Error{Code: "machine_offline", Message: j.Machine + " is not connected"})
@@ -204,24 +206,24 @@ func (s *Service) run(j *store.Job) {
 		log.Printf("jobs: %s: %v", j.ID, err)
 	}
 	st.publish(Event{"started", map[string]any{"job_id": j.ID, "model": model}}, false)
-	s.hub.Tell(j.Machine, map[string]string{"type": "job_start", "job_id": j.ID, "operation": j.Operation})
-	defer s.hub.Tell(j.Machine, map[string]string{"type": "job_end", "job_id": j.ID})
+	s.hub.Tell(m, map[string]string{"type": "job_start", "job_id": j.ID, "operation": j.Operation})
+	defer s.hub.Tell(m, map[string]string{"type": "job_end", "job_id": j.ID})
 	log.Printf("jobs: %s started with %s", j.ID, model)
 
-	screen, _ := s.hub.ScreenOf(j.Machine)
-	programs, err := s.store.ProjectPrograms(ctx, j.Project)
+	screen, _ := s.hub.ScreenOf(m)
+	programs, err := s.store.ProjectPrograms(ctx, j.UserID, j.Project)
 	if err != nil {
 		s.finish(j, st, nil, err)
 		return
 	}
-	installed, err := s.store.MachinePrograms(ctx, j.Machine)
+	installed, err := s.store.MachinePrograms(ctx, j.UserID, j.Machine)
 	if err != nil {
 		s.finish(j, st, nil, err)
 		return
 	}
 	env := &env{svc: s, job: j, stream: st, programs: programs, installed: installed}
 	output, err := s.brain.Run(ctx, brain.Task{
-		JobID: j.ID, Project: j.Project, Definition: j.Definition, Input: j.Input,
+		UserID: j.UserID, JobID: j.ID, Project: j.Project, Definition: j.Definition, Input: j.Input,
 		Screen: screen, MaxSteps: s.maxSteps,
 	}, env)
 	if err == nil {

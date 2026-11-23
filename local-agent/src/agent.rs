@@ -26,7 +26,6 @@ const MAX_BACKOFF: Duration = Duration::from_secs(30);
 #[derive(Clone)]
 pub struct Settings {
     pub url: String,
-    pub machine: String,
     pub token: String,
     pub instance_id: String,
     pub max_width: u32,
@@ -55,6 +54,9 @@ struct Inbound {
     operation: String,
     #[serde(default)]
     code: String,
+    /// In "welcome": the machine name the token belongs to.
+    #[serde(default)]
+    machine: String,
 }
 
 /// Runs forever (until the process is stopped).

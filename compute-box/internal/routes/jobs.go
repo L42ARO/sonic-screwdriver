@@ -21,7 +21,7 @@ func (d Deps) createJob(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, err)
 		return
 	}
-	job, err := d.Jobs.Submit(r.Context(), jobs.Submission{
+	job, err := d.Jobs.Submit(r.Context(), userOf(r), jobs.Submission{
 		Project:        r.PathValue("project"),
 		Operation:      r.PathValue("name"),
 		Machine:        body.Machine,
@@ -40,7 +40,7 @@ func (d Deps) createJob(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d Deps) getJob(w http.ResponseWriter, r *http.Request) {
-	j, err := d.Store.GetJob(r.Context(), d.Store.UserID, r.PathValue("id"))
+	j, err := d.Store.GetJob(r.Context(), userOf(r), r.PathValue("id"))
 	if err != nil {
 		utils.WriteError(w, err)
 		return
@@ -62,7 +62,7 @@ func (d Deps) jobEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d Deps) stream(w http.ResponseWriter, r *http.Request, jobID string) {
-	history, live, cancel, err := d.Jobs.Subscribe(r.Context(), jobID)
+	history, live, cancel, err := d.Jobs.Subscribe(r.Context(), userOf(r), jobID)
 	if err != nil {
 		utils.WriteError(w, err)
 		return

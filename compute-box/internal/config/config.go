@@ -14,7 +14,7 @@ import (
 type Config struct {
 	Addr       string        // HTTP listen address
 	DataDir    string        // SQLite database and job screenshots
-	AgentToken string        // shared secret local-agents present when connecting
+	PublicURL  string        // how people reach this server, e.g. https://box.example.com; used in printed links
 	Brain      string        // "openai" or "scripted"
 	ScriptsDir string        // action scripts for the scripted brain
 	OpenAIKey  string        // never logged
@@ -33,7 +33,7 @@ func Load() Config {
 	return Config{
 		Addr:       cmp.Or(os.Getenv("SONIC_ADDR"), "127.0.0.1:8080"), // localhost only unless asked
 		DataDir:    dataDir,
-		AgentToken: os.Getenv("SONIC_AGENT_TOKEN"),
+		PublicURL:  strings.TrimRight(os.Getenv("SONIC_PUBLIC_URL"), "/"),
 		Brain:      cmp.Or(os.Getenv("SONIC_BRAIN"), "openai"),
 		ScriptsDir: cmp.Or(os.Getenv("SONIC_SCRIPTS_DIR"), filepath.Join("scripts")),
 		OpenAIKey:  cmp.Or(os.Getenv("OPENAI_KEY"), os.Getenv("OPENAI_API_KEY")),

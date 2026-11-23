@@ -1,7 +1,6 @@
 package routes_test
 
 import (
-	"context"
 	"net/http/httptest"
 	"testing"
 
@@ -18,11 +17,13 @@ func TestDashboardShowsSyncedConfigurationReadOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	ledger, _ := budget.New(context.Background(), db, 3, nil)
-	srv := httptest.NewServer(routes.New(routes.Deps{Store: db, Hub: hub.New(db, "secret"), Ledger: ledger}))
+	ledger := budget.New(db, budget.NewCapLimiter(db, 3, nil))
+	srv := httptest.NewServer(routes.New(routes.Deps{Store: db, Hub: hub.New(db), Ledger: ledger}))
 	defer srv.Close()
+	owner := newOwner(t, db)
+	page := map[string]string{"Cookie": owner.cookie}
 
-	expect(t, do(t, "GET", srv.URL+"/", "", nil), 200, "No projects yet")
+	expect(t, do(t, "GET", srv.URL+"/", "", page), 200, "No projects yet")
 
 	expect(t, do(t, "PUT", srv.URL+"/v1/machines/front-desk/programs",
 		`{"dentasoft":{"executable":"C:\\Apps\\DentaSoft.exe","args":["--clinic","main"],"window_title_contains":"DentaSoft"}}`, nil), 200, "dentasoft")
@@ -40,10 +41,10 @@ func TestDashboardShowsSyncedConfigurationReadOnly(t *testing.T) {
 		`C:\Apps\DentaSoft.exe`,              // machine installation
 		"--clinic main",
 		"never connected",
-		`<span class="value">0 / 1</span>`, // machines online
+		`<span class="value">0 / 2</span>`, // machines online: front-desk (synced) and dentist-front-desk (token)
 		"No jobs yet.",
 	} {
-		expect(t, do(t, "GET", srv.URL+"/", "", nil), 200, want)
+		expect(t, do(t, "GET", srv.URL+"/", "", page), 200, want)
 	}
 	for _, method := range []string{"POST", "PUT", "DELETE"} {
 		if res := do(t, method, srv.URL+"/", "", nil); res.StatusCode != 405 {

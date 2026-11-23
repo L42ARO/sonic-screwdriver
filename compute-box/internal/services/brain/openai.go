@@ -19,10 +19,16 @@ type OpenAI struct {
 	client    openAIClient
 	model     string
 	reasoning string
-	ledger    *budget.Ledger
+	ledger    Meter
 }
 
-func NewOpenAI(key, model, reasoningEffort string, ledger *budget.Ledger) (*OpenAI, error) {
+// Meter checks and records model spend per user; *budget.Ledger implements it.
+type Meter interface {
+	Allow(ctx context.Context, userID int64) error
+	Record(ctx context.Context, userID int64, jobID, model string, t budget.Tokens) float64
+}
+
+func NewOpenAI(key, model, reasoningEffort string, ledger Meter) (*OpenAI, error) {
 	if key == "" {
 		return nil, fmt.Errorf("no OpenAI key: set OPENAI_KEY in .env")
 	}
@@ -74,7 +80,7 @@ func (b *OpenAI) Run(ctx context.Context, t Task, env Env) (json.RawMessage, err
 
 	actions, nudges, finishRetries := 0, 0, 0
 	for turn := 0; turn < maxTurns; turn++ {
-		if err := b.ledger.Allow(); err != nil {
+		if err := b.ledger.Allow(ctx, t.UserID); err != nil {
 			return nil, fail("budget_exceeded", "%v", err)
 		}
 		env.Status("thinking")
@@ -87,7 +93,7 @@ func (b *OpenAI) Run(ctx context.Context, t Task, env Env) (json.RawMessage, err
 			return nil, fail("agent_gave_up", "model call failed: %v", err)
 		}
 		u := resp.Usage
-		cost := b.ledger.Record(ctx, t.JobID, b.model, budget.Tokens{
+		cost := b.ledger.Record(ctx, t.UserID, t.JobID, b.model, budget.Tokens{
 			Input: u.InputTokens, Cached: u.InputTokensDetails.CachedTokens,
 			CacheWrite: u.InputTokensDetails.CacheWriteTokens,
 			Output:     u.OutputTokens, Reasoning: u.OutputTokensDetails.ReasoningTokens,

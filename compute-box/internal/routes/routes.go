@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/L42ARO/sonic-screwdriver/compute-box/ext"
 	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/services/budget"
 	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/services/hub"
 	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/services/jobs"
@@ -20,6 +21,8 @@ type Deps struct {
 	Jobs       *jobs.Service
 	Ledger     *budget.Ledger
 	ScreensDir string
+	// SignIn decides how people sign in to the dashboard (default: OwnerLink).
+	SignIn ext.SignIn
 	// Extra, if set, registers additional handlers after the built-in ones.
 	Extra func(mux *http.ServeMux)
 }
@@ -31,26 +34,37 @@ func New(d Deps) http.Handler {
 		utils.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
 
-	// Caller API
-	mux.HandleFunc("PUT /v1/projects/{project}/programs", d.projectPrograms)
-	mux.HandleFunc("GET /v1/projects/{project}/programs", d.projectPrograms)
-	mux.HandleFunc("PUT /v1/machines/{machine}/programs", d.machinePrograms)
-	mux.HandleFunc("GET /v1/machines/{machine}/programs", d.machinePrograms)
-	mux.HandleFunc("PUT /v1/projects/{project}/operations", d.syncOperations)
-	mux.HandleFunc("GET /v1/projects/{project}/operations", d.listOperations)
-	mux.HandleFunc("POST /v1/projects/{project}/operations/{name}/jobs", d.createJob)
-	mux.HandleFunc("GET /v1/jobs/{id}", d.getJob)
-	mux.HandleFunc("GET /v1/jobs/{id}/events", d.jobEvents)
-	mux.HandleFunc("GET /v1/machines", d.listMachines)
-	mux.HandleFunc("GET /v1/usage", d.usage)
+	if d.SignIn == nil {
+		d.SignIn = OwnerLink{Store: d.Store}
+	}
 
-	// Local-agents
+	// Caller API: API key
+	mux.HandleFunc("PUT /v1/projects/{project}/programs", d.api(d.projectPrograms))
+	mux.HandleFunc("GET /v1/projects/{project}/programs", d.api(d.projectPrograms))
+	mux.HandleFunc("PUT /v1/machines/{machine}/programs", d.api(d.machinePrograms))
+	mux.HandleFunc("GET /v1/machines/{machine}/programs", d.api(d.machinePrograms))
+	mux.HandleFunc("PUT /v1/projects/{project}/operations", d.api(d.syncOperations))
+	mux.HandleFunc("GET /v1/projects/{project}/operations", d.api(d.listOperations))
+	mux.HandleFunc("POST /v1/projects/{project}/operations/{name}/jobs", d.api(d.createJob))
+	mux.HandleFunc("GET /v1/jobs/{id}", d.api(d.getJob))
+	mux.HandleFunc("GET /v1/jobs/{id}/events", d.api(d.jobEvents))
+	mux.HandleFunc("GET /v1/machines", d.api(d.listMachines))
+	mux.HandleFunc("GET /v1/usage", d.api(d.usage))
+
+	// Local-agents: machine token, checked in the hello message
 	mux.HandleFunc("GET /v1/agent", d.Hub.ServeAgent)
 
-	// Dashboard and job viewer
-	mux.HandleFunc("GET /{$}", d.viewerHome)
-	mux.HandleFunc("GET /jobs/{id}", d.viewerJob)
-	mux.Handle("GET /screens/", http.StripPrefix("/screens/", http.FileServer(http.Dir(d.ScreensDir))))
+	// Dashboard: signed-in browser
+	d.SignIn.Mount(mux, accounts{d.Store})
+	mux.HandleFunc("POST /logout", d.dashboard(d.logout))
+	mux.HandleFunc("GET /{$}", d.dashboard(d.viewerHome))
+	mux.HandleFunc("GET /jobs/{id}", d.dashboard(d.viewerJob))
+	mux.HandleFunc("GET /screens/{job}/{file}", d.dashboard(d.screenshot))
+	mux.HandleFunc("POST /dashboard/machines", d.dashboard(d.addMachine))
+	mux.HandleFunc("POST /dashboard/machines/{machine}/token", d.dashboard(d.regenerateMachineToken))
+	mux.HandleFunc("POST /dashboard/machines/{machine}/remove", d.dashboard(d.removeMachine))
+	mux.HandleFunc("POST /dashboard/keys", d.dashboard(d.createAPIKey))
+	mux.HandleFunc("POST /dashboard/keys/{id}/revoke", d.dashboard(d.revokeAPIKey))
 
 	if d.Extra != nil {
 		d.Extra(mux)

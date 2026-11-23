@@ -58,6 +58,9 @@ pub fn directory() -> Result<PathBuf> {
 pub struct Profile {
     pub version: u32,
     pub server_url: String,
+    /// Unused since machine tokens name the machine; kept so older settings files load.
+    #[serde(default, skip_serializing)]
+    #[allow(dead_code)]
     pub machine: String,
     pub start_at_signin: bool,
     pub instance_id: String,
@@ -78,7 +81,6 @@ impl Profile {
         if self.version != 1 {
             bail!("Unsupported saved settings version")
         }
-        validate_machine(&self.machine)?;
         endpoint(&self.server_url)?;
         for id in [&self.instance_id, &self.credential_id] {
             if id.len() != 32 || !id.bytes().all(|b| b.is_ascii_hexdigit()) {
@@ -90,31 +92,16 @@ impl Profile {
     pub fn connection(&self, token: String) -> Result<crate::agent::Settings> {
         self.validate()?;
         if token.trim().is_empty() || token.contains('\0') {
-            bail!("Enter the agent authentication token printed by the compute-box")
+            bail!("Paste the machine token from the dashboard (Add machine)")
         }
         Ok(crate::agent::Settings {
             url: endpoint(&self.server_url)?,
-            machine: self.machine.clone(),
             token,
             instance_id: self.instance_id.clone(),
             max_width: 1280,
             overlay: true,
         })
     }
-}
-pub fn validate_machine(name: &str) -> Result<()> {
-    if name.is_empty()
-        || name.len() > 64
-        || !name.as_bytes()[0].is_ascii_alphabetic()
-        || !name
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
-    {
-        bail!(
-            "Machine name must start with a letter and use at most 64 letters, digits, underscores or hyphens"
-        )
-    }
-    Ok(())
 }
 pub fn endpoint(address: &str) -> Result<String> {
     let mut url = url::Url::parse(address.trim()).map_err(|_| {
@@ -214,7 +201,7 @@ fn write_token(profile: &Profile, token: &str) -> Result<()> {
         bail!("Agent token must contain 1 to 2500 bytes")
     }
     let target = credential_target(&profile.credential_id);
-    let user = wide(&profile.machine);
+    let user = wide("sonic-screwdriver");
     let mut credential: CREDENTIALW = unsafe { std::mem::zeroed() };
     credential.Type = CRED_TYPE_GENERIC;
     credential.TargetName = target.as_ptr() as *mut _;
@@ -420,27 +407,27 @@ mod tests {
         }
     }
     #[test]
-    fn machine_names_match_server_rules() {
-        for good in ["desk", "desk-1", "A_b"] {
-            assert!(validate_machine(good).is_ok())
-        }
-        for bad in ["", "1desk", "my desk", "desk/one"] {
-            assert!(validate_machine(bad).is_err())
-        }
-    }
-    #[test]
     fn preferences_contain_only_credential_reference() {
-        let mut p = Profile::new().unwrap();
-        p.machine = "desk".into();
+        let p = Profile::new().unwrap();
         let raw = serde_json::to_string(&p).unwrap();
         assert!(!raw.contains("token"));
         assert!(raw.contains("credential_id"));
         p.validate().unwrap();
     }
     #[test]
+    fn settings_saved_by_older_versions_still_load() {
+        let p = Profile::new().unwrap();
+        let old = format!(
+            r#"{{"version":1,"server_url":"http://localhost:8080","machine":"front-desk","start_at_signin":false,"instance_id":"{}","credential_id":"{}"}}"#,
+            p.instance_id, p.credential_id
+        );
+        let loaded: Profile = serde_json::from_str(&old).unwrap();
+        loaded.validate().unwrap();
+        assert!(!serde_json::to_string(&loaded).unwrap().contains("front-desk"));
+    }
+    #[test]
     fn credential_manager_roundtrip_uses_an_isolated_test_entry() {
-        let mut p = Profile::new().unwrap();
-        p.machine = "test-desk".into();
+        let p = Profile::new().unwrap();
         struct Cleanup(String);
         impl Drop for Cleanup {
             fn drop(&mut self) {
@@ -459,7 +446,6 @@ mod tests {
         let dir =
             std::env::temp_dir().join(format!("sonic-settings-test-{}", random_id().unwrap()));
         let mut p = Profile::new().unwrap();
-        p.machine = "test-desk".into();
         let token = format!("test-only-{}", random_id().unwrap());
         save_in(&mut p, &token, &dir, |_| {
             panic!("Saving with sign-in disabled must not touch the registry")
@@ -469,14 +455,13 @@ mod tests {
         assert!(read_token(&first).unwrap() == token);
         let raw = fs::read_to_string(dir.join("config.json")).unwrap();
         assert!(!raw.contains(&token));
-        p.machine = "renamed-desk".into();
         p.server_url = "https://example.com".into();
         save_in(&mut p, &token, &dir, |_| {
             panic!("Unchanged sign-in settings must not touch the registry")
         })
         .unwrap();
         let second = load_from(&dir).unwrap().unwrap();
-        assert_eq!(second.machine, "renamed-desk");
+        assert_eq!(second.server_url, "https://example.com");
         assert_eq!(second.instance_id, first.instance_id);
         assert!(read_token(&first).is_err());
         assert!(read_token(&second).unwrap() == token);

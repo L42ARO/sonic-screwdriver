@@ -42,8 +42,9 @@ func TestEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	ledger, _ := budget.New(context.Background(), db, 3, nil)
-	h := hub.New(db, "secret")
+	ledger := budget.New(db, budget.NewCapLimiter(db, 3, nil))
+	h := hub.New(db)
+	owner := newOwner(t, db)
 	js := jobs.New(db, h, &brain.Scripted{Dir: scripts}, jobs.Options{
 		ScreensDir: filepath.Join(dir, "screens"), JobTimeout: time.Minute, MaxSteps: 40,
 	})
@@ -71,8 +72,8 @@ func TestEndToEnd(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	actions := make(chan string, 100)
-	go fakeAgent(t, ctx, strings.Replace(srv.URL, "http", "ws", 1)+"/v1/agent", actions)
-	waitFor(t, func() bool { return h.Online("dentist-front-desk") })
+	go fakeAgent(t, ctx, strings.Replace(srv.URL, "http", "ws", 1)+"/v1/agent", owner.machineToken, actions)
+	waitFor(t, func() bool { return h.Online(hub.Machine{User: owner.id, Name: "dentist-front-desk"}) })
 
 	expect(t, do(t, "POST", jobURL, `{"machine":"dentist-front-desk","input":{"patient_id":"nope"}}`, nil), 422, `"invalid_input"`)
 	expect(t, do(t, "POST", srv.URL+"/v1/projects/dental-clinic/operations/missing/jobs", job, nil), 404, `"unknown_operation"`)
@@ -110,10 +111,10 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	expect(t, do(t, "GET", srv.URL+"/v1/machines", "", nil), 200, `"online":true`)
-	expect(t, do(t, "GET", srv.URL+"/", "", nil), 200, "lookup_patient")
+	expect(t, do(t, "GET", srv.URL+"/", "", map[string]string{"Cookie": owner.cookie}), 200, "lookup_patient")
 }
 
-func fakeAgent(t *testing.T, ctx context.Context, url string, actions chan<- string) {
+func fakeAgent(t *testing.T, ctx context.Context, url, token string, actions chan<- string) {
 	ws, _, err := websocket.Dial(ctx, url, nil)
 	if err != nil {
 		t.Errorf("dial: %v", err)
@@ -121,7 +122,7 @@ func fakeAgent(t *testing.T, ctx context.Context, url string, actions chan<- str
 	}
 	defer ws.CloseNow()
 	ws.SetReadLimit(1 << 20)
-	hello, _ := json.Marshal(map[string]any{"type": "hello", "machine": "dentist-front-desk", "token": "secret",
+	hello, _ := json.Marshal(map[string]any{"type": "hello", "token": token,
 		"version": "test", "screen": map[string]any{"width": 1280, "height": 720, "scale": 1.5}})
 	ws.Write(ctx, websocket.MessageText, hello)
 	for {
@@ -146,9 +147,50 @@ func fakeAgent(t *testing.T, ctx context.Context, url string, actions chan<- str
 	}
 }
 
+// bearer is the API key do sends unless a test passes its own Authorization header.
+var bearer string
+
+// testOwner is a user with an API key, a machine token for dentist-front-desk and a
+// signed-in dashboard session.
+type testOwner struct {
+	id                         int64
+	apiKey, machineToken, cookie string
+}
+
+// newOwner sets up the default (self-hosted) owner and makes do authenticate as them.
+func newOwner(t *testing.T, db *store.Store) testOwner {
+	t.Helper()
+	o := testOwner{id: db.DefaultUserID()}
+	o = withCredentials(t, db, o)
+	bearer = o.apiKey
+	t.Cleanup(func() { bearer = "" })
+	return o
+}
+
+func withCredentials(t *testing.T, db *store.Store, o testOwner) testOwner {
+	t.Helper()
+	ctx := context.Background()
+	var err error
+	if o.apiKey, err = db.CreateAPIKey(ctx, o.id, "test"); err != nil {
+		t.Fatal(err)
+	}
+	if o.machineToken, err = db.IssueMachineToken(ctx, o.id, "dentist-front-desk"); err != nil {
+		t.Fatal(err)
+	}
+	session, err := db.CreateSession(ctx, o.id, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	o.cookie = "sonic_session=" + session
+	return o
+}
+
 func do(t *testing.T, method, url, body string, headers map[string]string) *http.Response {
 	t.Helper()
 	req, _ := http.NewRequest(method, url, strings.NewReader(body))
+	if bearer != "" {
+		req.Header.Set("Authorization", "Bearer "+bearer)
+	}
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}

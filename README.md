@@ -72,20 +72,25 @@ Requirements: Windows, Go, Rust, Python 3, and an OpenAI key in `compute-box/.en
 `OPENAI_KEY=...`.
 
 ```powershell
-# 1. the compute-box (viewer at http://127.0.0.1:8080)
+# 1. the compute-box. It prints a one-time dashboard sign-in link; open it.
 cd compute-box; go run .
+# In the dashboard: "Add machine" dentist-front-desk (copy its machine token) and
+# "Create API key" (copy the key). Each is shown only once.
 
 # 2. the local-agent, on the machine with DentaSoft
 cd local-agent; cargo build --release
 .\target\release\local-agent.exe
-# In setup: URL http://localhost:8080, machine dentist-front-desk,
-# and the agent authentication token printed by the compute-box (not the OpenAI key).
+# In setup: URL http://localhost:8080 and the machine token (not the OpenAI key).
 
 # 3. Python sample: startup registers the machine installation and project automatically
 # The agent can open DentaSoft when needed.
-cd test-source\python-clinic-backend; .\.venv\Scripts\uvicorn main:app
+cd test-source\python-clinic-backend
+$env:SONIC_API_KEY = "sonic_sk_..."   # the API key from step 1
+.\.venv\Scripts\uvicorn main:app
 curl http://localhost:8000/patients/P-1004
 ```
+
+Lost the sign-in link? `go run . login-link` prints a new one.
 
 Don't touch the mouse or keyboard while the overlay is showing. To test the plumbing
 without a model, start the compute-box with `SONIC_BRAIN=scripted`.
@@ -96,7 +101,7 @@ DentaSoft login: user `drsmith`, password `molar123`.
 
 The compute-box ships as a Docker image. `docker compose up` in `compute-box/` runs it on
 any Linux server; see [the compute-box instructions](compute-box/README.md#docker-self-hosting)
-for the agent token, SDK URL, settings and the persistent data volume.
+for signing in, machine tokens, API keys, settings and the persistent data volume.
 
 ## Programs and installations
 

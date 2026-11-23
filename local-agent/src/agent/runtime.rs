@@ -231,7 +231,7 @@ async fn handshake(
         tokio_tungstenite::connect_async(settings.url.as_str()),
     )
     .await??;
-    ws.send(Message::text(json!({"type":"hello","machine":settings.machine,"token":settings.token,
+    ws.send(Message::text(json!({"type":"hello","token":settings.token,
         "instance_id":settings.instance_id,"probe":probe,"version":env!("CARGO_PKG_VERSION"),"screen":screen}).to_string())).await?;
     let welcome = tokio::time::timeout(Duration::from_secs(10), async {
         loop {
@@ -261,10 +261,9 @@ pub async fn probe(settings: &Settings) -> Result<()> {
 fn rejection_message(welcome: &Inbound) -> String {
     // Never render arbitrary server text into the UI/log; a malicious server can echo a token.
     match welcome.code.as_str(){
-        "authentication_failed"=>"Authentication failed. Enter the agent token printed by the compute-box.",
-        "machine_in_use"=>"Machine name is already connected. Choose another name or disconnect the other agent.",
-        "invalid_machine"=>"Machine name was rejected. Use a letter followed by letters, digits, underscores or hyphens.",
-        _=>"Connection rejected by the server. Check the URL, agent token and machine name.",
+        "authentication_failed"=>"Machine token rejected. Add this machine in the dashboard, or regenerate its token, and paste the new token.",
+        "machine_in_use"=>"This machine is already connected from another agent. Close the other agent first.",
+        _=>"Connection rejected by the server. Check the URL and machine token.",
     }.into()
 }
 
@@ -287,7 +286,9 @@ async fn connect(
             welcome.code == "machine_in_use",
         ));
     }
-    report(state, "Connected — ready", true, false);
+    // The token decides which machine this is; the server says which in its welcome.
+    let connected = if welcome.machine.is_empty() { "Connected".to_string() } else { format!("Connected as {}", welcome.machine) };
+    report(state, format!("{connected} — ready"), true, false);
     let (mut sink, mut stream) = ws.split();
     let (out_tx, mut out_rx) = mpsc::unbounded_channel::<Message>();
     let writer = tokio::spawn(async move {
@@ -354,7 +355,7 @@ async fn connect(
             "job_start" => {
                 busy = true;
                 let _ = work.send(Work::JobStart(message.operation));
-                report(state, "Connected — job running", true, true);
+                report(state, format!("{connected} — job running"), true, true);
             }
             "status" => {
                 let _ = work.send(Work::Status(message.text));
@@ -365,7 +366,7 @@ async fn connect(
                 if can_switch(busy, revision, &desired.borrow()) {
                     break Ok(SessionExit::Changed);
                 }
-                report(state, "Connected — ready", true, false);
+                report(state, format!("{connected} — ready"), true, false);
             }
             _ => {}
         }
@@ -420,7 +421,6 @@ mod tests {
         });
         let settings = Settings {
             url: format!("ws://{address}"),
-            machine: "desk".into(),
             token: "test-only-agent-secret".into(),
             instance_id: "test".into(),
             max_width: 1280,

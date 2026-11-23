@@ -156,6 +156,24 @@ func (s *Store) ListJobs(ctx context.Context, userID int64, machine string, stat
 	return out, rows.Err()
 }
 
+// QueuedJobs returns every user's waiting jobs, oldest first, to re-queue after a restart.
+func (s *Store) QueuedJobs(ctx context.Context) ([]*Job, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT `+jobColumns+` FROM jobs j WHERE j.status = ? ORDER BY j.created_at`, StatusQueued)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*Job
+	for rows.Next() {
+		j, err := scanJob(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, j)
+	}
+	return out, rows.Err()
+}
+
 // InterruptRunning fails jobs left running by a previous process (it stopped mid-job).
 func (s *Store) InterruptRunning(ctx context.Context) (int64, error) {
 	r, err := s.db.ExecContext(ctx, `

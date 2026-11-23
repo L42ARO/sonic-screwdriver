@@ -29,13 +29,14 @@ RESULTS = os.path.join(ROOT, "evals", "results")
 
 # --------------------------------------------------------------------------- compute-box
 class Box:
-    def __init__(self, url, machine):
+    def __init__(self, url, machine, api_key):
         self.url, self.machine = url.rstrip("/"), machine
+        self.auth = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
     def call(self, method, path, body=None, timeout=30):
         req = urllib.request.Request(self.url + path, method=method,
                                      data=None if body is None else json.dumps(body).encode(),
-                                     headers={"Content-Type": "application/json"})
+                                     headers={"Content-Type": "application/json", **self.auth})
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return r.status, json.loads(r.read() or b"null")
@@ -47,7 +48,7 @@ class Box:
         req = urllib.request.Request(
             f"{self.url}/v1/projects/{project}/operations/{operation}/jobs", method="POST",
             data=json.dumps({"machine": self.machine, "input": input_}).encode(),
-            headers={"Content-Type": "application/json", "Accept": "text/event-stream"})
+            headers={"Content-Type": "application/json", "Accept": "text/event-stream", **self.auth})
         try:
             resp = urllib.request.urlopen(req, timeout=timeout)
         except urllib.error.HTTPError as e:
@@ -234,9 +235,12 @@ def main():
     ap.add_argument("--configure-only", action="store_true", help="sync test program installations and operations without running jobs; run on the target machine")
     ap.add_argument("--url", default=os.getenv("SONIC_URL", "http://127.0.0.1:8080"))
     ap.add_argument("--machine", default=os.getenv("SONIC_MACHINE", "dentist-front-desk"))
+    ap.add_argument("--api-key", default=os.getenv("SONIC_API_KEY"), help="defaults to SONIC_API_KEY")
     args = ap.parse_args()
 
-    box = Box(args.url, args.machine)
+    if not args.api_key:
+        sys.exit("set SONIC_API_KEY (or --api-key) to an API key from the compute-box dashboard")
+    box = Box(args.url, args.machine, args.api_key)
     try:
         status, body = box.call("GET", "/v1/machines")
     except OSError as e:

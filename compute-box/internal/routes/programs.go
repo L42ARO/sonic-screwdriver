@@ -31,12 +31,12 @@ func (d Deps) projectPrograms(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		if err := d.Store.SetProjectPrograms(r.Context(), name, programs); err != nil {
+		if err := d.Store.SetProjectPrograms(r.Context(), userOf(r), name, programs); err != nil {
 			utils.WriteError(w, err)
 			return
 		}
 	}
-	programs, err := d.Store.ProjectPrograms(r.Context(), name)
+	programs, err := d.Store.ProjectPrograms(r.Context(), userOf(r), name)
 	if err != nil {
 		utils.WriteError(w, err)
 		return
@@ -77,12 +77,12 @@ func (d Deps) machinePrograms(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		if err := d.Store.SetMachinePrograms(r.Context(), name, programs); err != nil {
+		if err := d.Store.SetMachinePrograms(r.Context(), userOf(r), name, programs); err != nil {
 			utils.WriteError(w, err)
 			return
 		}
 	}
-	programs, err := d.Store.MachinePrograms(r.Context(), name)
+	programs, err := d.Store.MachinePrograms(r.Context(), userOf(r), name)
 	if err != nil {
 		utils.WriteError(w, err)
 		return

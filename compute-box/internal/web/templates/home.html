@@ -1,6 +1,6 @@
 {{define "home.html"}}
 {{template "head" "Dashboard"}}
-<header><h1>Dashboard</h1><span class="muted">read-only · configuration changes go through the SDK</span></header>
+<header><h1>Dashboard</h1><span class="muted">projects, operations and programs change through the SDK</span></header>
 
 <section class="stats" id="stats" data-live>
   <div class="stat"><span class="label">Machines online</span><span class="value">{{.Online}} / {{len .Machines}}</span></div>
@@ -10,8 +10,12 @@
 </section>
 
 <div class="cols">
-<section>
-  <h2 class="section">Machines</h2>
+<section id="machines-section">
+  <div class="title"><h2 class="section">Machines</h2>
+    <form class="inline" method="post" action="/dashboard/machines">
+      <input name="name" required pattern="[A-Za-z][A-Za-z0-9_\-]{0,63}" placeholder="new-machine-name" aria-label="New machine name">
+      <button type="submit">Add machine</button>
+    </form></div>
   <div id="machines" data-live>
   {{range .Machines}}
   <div class="card" id="machine-{{.Name}}">
@@ -21,7 +25,14 @@
       <span>Now</span>
       <span>{{with .Current}}<a href="/jobs/{{.ID}}">{{.Project}} / {{.Operation}}</a> <span class="s-running">· {{.Steps}} steps</span>{{else}}idle{{end}}</span>
       <span>Queued</span><span>{{if .Queued}}<span class="s-queued">{{.Queued}} waiting</span>{{else}}none{{end}}</span>
-      {{if .Screen}}<span>Screen</span><span>{{.Screen}}</span>{{end}}
+      {{if .Screen}}<span>Screen</span><span>{{screen .Screen}}</span>{{end}}
+      <span>Token</span><span>{{if .TokenPrefix}}<code>{{.TokenPrefix}}</code> <span class="muted">· issued {{ago .TokenCreatedAt}}</span>{{else}}<span class="s-queued">none yet: generate one to connect an agent</span>{{end}}</span>
+    </div>
+    <div class="actions">
+      <form method="post" action="/dashboard/machines/{{.Name}}/token"{{if .TokenPrefix}} onsubmit="return confirm('Replace the token for {{.Name}}? Its agent disconnects until you paste the new token.')"{{end}}>
+        <button type="submit">{{if .TokenPrefix}}Regenerate token{{else}}Generate token{{end}}</button></form>
+      <form method="post" action="/dashboard/machines/{{.Name}}/remove" onsubmit="return confirm('Remove {{.Name}}? Its token and installed programs are deleted; job history stays.')">
+        <button type="submit" class="danger">Remove</button></form>
     </div>
     <details id="machine-{{.Name}}-programs"><summary>Installed programs ({{len .Installed}})</summary>
       {{range .Installed}}
@@ -38,7 +49,7 @@
     </details>
   </div>
   {{else}}
-  <p class="muted card">No machine has connected yet. Start a local-agent and enter this server's URL.</p>
+  <p class="muted card">No machines yet. Add one above, then paste its token into the local agent on that computer.</p>
   {{end}}
   </div>
 </section>
@@ -63,6 +74,25 @@
   </div>
 </section>
 </div>
+
+<section id="keys">
+  <div class="title"><h2 class="section">API keys</h2>
+    <form class="inline" method="post" action="/dashboard/keys">
+      <input name="name" maxlength="64" placeholder="key name, e.g. production" aria-label="New API key name">
+      <button type="submit">Create API key</button>
+    </form></div>
+  <div class="card">
+  {{range .Keys}}
+    <div class="row"><span><strong>{{.Name}}</strong> <code class="muted">{{.Prefix}}</code></span>
+      <span class="muted">created {{ago .CreatedAt}} · {{if .LastUsedAt}}last used {{ago .LastUsedAt}}{{else}}never used{{end}}
+        <form class="inline" method="post" action="/dashboard/keys/{{.ID}}/revoke" onsubmit="return confirm('Revoke {{.Name}}? Backends using it stop working.')">
+          <button type="submit" class="danger">Revoke</button></form></span>
+    </div>
+  {{else}}
+    <p class="muted">No API keys. Create one for each backend that calls this compute-box; the SDKs read it from <code>SONIC_API_KEY</code>.</p>
+  {{end}}
+  </div>
+</section>
 
 <h2 class="section">Projects</h2>
 {{range .Projects}}

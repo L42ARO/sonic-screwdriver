@@ -54,13 +54,15 @@ evaluation-runner configuration command is needed. A sync failure stops startup 
 
 ## Run
 
-Start the compute-box and connect the local-agent as `dentist-front-desk`, then run from
+Start the compute-box, add the machine `dentist-front-desk` in its dashboard and connect the
+local-agent with that machine token, then run from
 this example's directory:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\pip install -r requirements.txt
 $env:SONIC_URL = "http://localhost:8080"
+$env:SONIC_API_KEY = "sonic_sk_..."   # from the dashboard: Create API key
 $env:DENTASOFT_MACHINE = "dentist-front-desk"
 .\.venv\Scripts\uvicorn main:app --reload
 ```

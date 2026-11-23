@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"sort"
 
+	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/services/hub"
 	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/store"
 	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/web"
 )
@@ -38,7 +39,7 @@ type projectView struct {
 // viewerHome is the unified dashboard: machines, recent jobs and projects on one page.
 func (d Deps) viewerHome(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	uid := d.Store.UserID
+	uid := userOf(r)
 	machines, err := d.Store.ListMachines(ctx, uid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -53,7 +54,7 @@ func (d Deps) viewerHome(w http.ResponseWriter, r *http.Request) {
 	online, running, queued := 0, 0, 0
 	machineViews := make([]machineView, 0, len(machines))
 	for _, m := range machines {
-		v := machineView{Machine: m, Online: d.Hub.Online(m.Name)}
+		v := machineView{Machine: m, Online: d.Hub.Online(hub.Machine{User: uid, Name: m.Name})}
 		if v.Online {
 			online++
 		}
@@ -64,7 +65,7 @@ func (d Deps) viewerHome(w http.ResponseWriter, r *http.Request) {
 		waiting, _ := d.Store.ListJobs(ctx, uid, m.Name, []string{store.StatusQueued}, 100)
 		v.Queued = len(waiting)
 		queued += v.Queued
-		installed, _ := d.Store.MachinePrograms(ctx, m.Name)
+		installed, _ := d.Store.MachinePrograms(ctx, uid, m.Name)
 		v.Installed = sortedInstallations(installed)
 		machineViews = append(machineViews, v)
 	}
@@ -72,21 +73,22 @@ func (d Deps) viewerHome(w http.ResponseWriter, r *http.Request) {
 	projectViews := make([]projectView, 0, len(projects))
 	for _, p := range projects {
 		operations, _ := d.Store.ListOperations(ctx, uid, p.Name)
-		programs, _ := d.Store.ProjectPrograms(ctx, p.Name)
+		programs, _ := d.Store.ProjectPrograms(ctx, uid, p.Name)
 		projectViews = append(projectViews, projectView{p, operations, sortedPrograms(programs)})
 	}
 
 	jobs, _ := d.Store.ListJobs(ctx, uid, "", nil, 40)
-	spent, capUSD := d.Ledger.Spent()
+	keys, _ := d.Store.ListAPIKeys(ctx, uid)
+	spent, capUSD, _ := d.Ledger.Budget(ctx, uid)
 	web.Render(w, "home.html", map[string]any{
-		"Machines": machineViews, "Projects": projectViews, "Jobs": jobs,
+		"Machines": machineViews, "Projects": projectViews, "Jobs": jobs, "Keys": keys,
 		"Online": online, "Running": running, "Queued": queued, "Spent": spent, "Cap": capUSD,
 	})
 }
 
 // viewerJob shows one job's steps and screenshots.
 func (d Deps) viewerJob(w http.ResponseWriter, r *http.Request) {
-	j, err := d.Store.GetJob(r.Context(), d.Store.UserID, r.PathValue("id"))
+	j, err := d.Store.GetJob(r.Context(), userOf(r), r.PathValue("id"))
 	if err != nil || j == nil {
 		http.NotFound(w, r)
 		return

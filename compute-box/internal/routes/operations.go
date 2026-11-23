@@ -28,7 +28,7 @@ func (d Deps) syncOperations(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, utils.NewError(http.StatusBadRequest, "invalid_definition", err.Error()))
 		return
 	}
-	res, err := d.Store.SyncOperations(r.Context(), d.Store.UserID, project, defs)
+	res, err := d.Store.SyncOperations(r.Context(), userOf(r), project, defs)
 	if err != nil {
 		utils.WriteError(w, err)
 		return
@@ -37,7 +37,7 @@ func (d Deps) syncOperations(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d Deps) listOperations(w http.ResponseWriter, r *http.Request) {
-	ops, err := d.Store.ListOperations(r.Context(), d.Store.UserID, r.PathValue("project"))
+	ops, err := d.Store.ListOperations(r.Context(), userOf(r), r.PathValue("project"))
 	if err != nil {
 		utils.WriteError(w, err)
 		return

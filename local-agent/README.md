@@ -21,10 +21,12 @@ Use the release build. The debug build encodes screenshots several times slower.
 ## Desktop setup and tray
 
 Double-click `local-agent.exe` with no arguments. The first run opens a black-and-white
-setup window for the compute-box URL, machine name, agent token and optional start at
-sign-in. Copy the **agent authentication token** printed by the compute-box; never enter
-an OpenAI key here. Test connection checks authentication and name availability without
-registering a machine or interrupting the current connection.
+setup window for the compute-box URL, the machine token and optional start at sign-in.
+Get the **machine token** from the compute-box dashboard's **Add machine** button; it
+identifies this computer as that machine. Never enter an OpenAI key here. Test checks the
+token without taking over the machine or interrupting the current connection. If the URL
+is plain `http://` to another computer, the window warns that the token and screenshots
+travel unencrypted.
 
 Preferences live in `%LOCALAPPDATA%\SonicScrewdriver\config.json`; the token lives in
 Windows Credential Manager, referenced by an opaque ID in the JSON. Saves replace the
@@ -40,11 +42,11 @@ and configuration changes wait for the current job to finish. Unsaved edits do n
 the running connection. Settings errors remain visible; a missing stored credential opens
 setup again so it can be repaired.
 
-Machine names start with a letter and contain up to 64 letters, digits, underscores or
-hyphens. Names must be unique among active connections. Changing a name addresses a
-different machine record on the box; installation settings are not renamed automatically.
-Network outages retry with backoff. Authentication and invalid-name errors wait for a
-settings change; a name in use is retried without replacing the existing agent.
+The machine's name comes from its token: the tray shows "Connected as <name>". To move
+the agent to another machine, paste that machine's token. Regenerating or removing the
+machine in the dashboard disconnects the agent. Network outages retry with backoff.
+Authentication errors wait for a settings change; a machine already connected from
+another agent is retried without replacing it.
 
 The executor runs in the signed-in user's desktop session. Start at sign-in is optional;
 it does not install a Windows service or enable unattended use of a locked desktop.
@@ -52,24 +54,24 @@ it does not install a Windows service or enable unattended use of a locked deskt
 ## Connected mode
 
 ```
-./target/release/local-agent.exe connect --machine dentist-front-desk --token YOUR_AGENT_TOKEN
+./target/release/local-agent.exe connect --url http://localhost:8080 --token sonic_mt_...
 # Or, after configuring the desktop app:
 ./target/release/local-agent.exe connect
 ```
 
 Dials out to the compute-box (`--url`, saved preference, then localhost), says hello
-with its machine name, token and screen size, then carries out every action it receives
+with its machine token and screen size, then carries out every action it receives
 and sends back the result with a base64 screenshot. On network failure it
 reconnects after 1 s, doubling to 30 s, with jitter. The compute-box pings every 15 s;
 45 s of silence counts as a dead connection. Screen work runs on its own thread, so
 heartbeats keep flowing during slow actions.
 
 The overlay appears when the compute-box starts a job and disappears when it ends or the
-connection drops. `--machine`, `--url` and `--token` can also come from `SONIC_MACHINE`,
-`SONIC_AGENT_URL` and `SONIC_AGENT_TOKEN`.
+connection drops. `--url` and `--token` can also come from `SONIC_AGENT_URL` and
+`SONIC_MACHINE_TOKEN`.
 
-CLI flags/environment override saved preferences. HTTP/WS URLs are accepted only for
-localhost; remote addresses require HTTPS/WSS with a valid certificate. Base paths are
+CLI flags/environment override saved preferences. HTTPS/WSS is recommended for remote
+servers; plain HTTP/WS also works, with the warning described above. Base paths are
 supported (e.g. `https://example.com/sonic` becomes `wss://example.com/sonic/v1/agent`).
 TLS uses the machine's trusted certificate roots. The CLI shares single-instance protection
 with the tray application. Release CLI commands attach to their parent console; launching

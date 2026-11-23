@@ -1,8 +1,8 @@
 // compute-box: the brain of sonic-screwdriver. It serves the caller API, holds the
 // connections from local-agents, and runs each job with a model that drives the screen.
 //
-//	go run .
-//	go run . rotate-agent-token
+//	go run .              start the server; prints a dashboard sign-in link
+//	go run . login-link   print a new sign-in link (works while the server runs)
 //
 // Programs that embed the compute-box import the server package instead.
 package main
@@ -21,14 +21,14 @@ import (
 func main() {
 	cfg := server.ConfigFromEnv()
 	if len(os.Args) > 1 {
-		if len(os.Args) != 2 || os.Args[1] != "rotate-agent-token" {
-			log.Fatal("usage: compute-box [rotate-agent-token]")
+		if len(os.Args) != 2 || os.Args[1] != "login-link" {
+			log.Fatal("usage: compute-box [login-link]")
 		}
-		token, err := server.RotateAgentToken(cfg)
+		link, err := server.LoginLink(context.Background(), cfg)
 		if err != nil {
-			log.Fatalf("rotating agent token: %v", err)
+			log.Fatalf("creating sign-in link: %v", err)
 		}
-		fmt.Printf("Agent authentication token: %s\nRestart the compute-box and update each local agent's settings.\n", token)
+		fmt.Printf("Dashboard sign-in link (works once, for 24 hours):\n  %s\n", link)
 		return
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

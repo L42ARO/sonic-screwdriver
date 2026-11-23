@@ -1,0 +1,22 @@
+{{define "login.html"}}
+{{template "head" "Sign in"}}
+<section class="card narrow">
+  <h1>Sign in</h1>
+  {{if .Failed}}
+    <p class="s-failed">This sign-in link is invalid, expired or already used.</p>
+  {{end}}
+  {{if .Token}}
+    <p>Continue to the dashboard as the owner of this compute-box.</p>
+    <form method="post" action="/login">
+      <input type="hidden" name="token" value="{{.Token}}">
+      <button class="primary" type="submit">Sign in</button>
+    </form>
+  {{else}}
+    <p>Open the sign-in link the compute-box printed when it started. Each link works once
+       and expires after a day.</p>
+    <p class="muted">Need a new one? On the server run <code>compute-box login-link</code>,
+       or with Docker <code>docker compose exec compute-box /app/compute-box login-link</code>.</p>
+  {{end}}
+</section>
+{{template "foot"}}
+{{end}}
