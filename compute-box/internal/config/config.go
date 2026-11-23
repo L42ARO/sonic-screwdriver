@@ -12,18 +12,20 @@ import (
 )
 
 type Config struct {
-	Addr       string        // HTTP listen address
-	DataDir    string        // SQLite database and job screenshots
-	PublicURL  string        // how people reach this server, e.g. https://box.example.com; used in printed links
-	Brain      string        // "openai" or "scripted"
-	ScriptsDir string        // action scripts for the scripted brain
-	OpenAIKey  string        // never logged
-	Model      string        // OpenAI model for the openai brain
-	Reasoning  string        // reasoning effort sent to the model; empty uses the model default
-	BudgetUSD  float64       // hard cap on total model spend; 0 disables
-	NtfyTopic  string        // ntfy.sh topic for alerts; empty disables
-	JobTimeout time.Duration // a job running longer than this fails with timeout
-	MaxSteps   int           // most screen actions one job may take
+	Addr       string // HTTP listen address
+	DataDir    string // SQLite database and job screenshots
+	PublicURL  string // how people reach this server, e.g. https://box.example.com; used in sign-in links
+	Brain      string // "openai" or "scripted"
+	ScriptsDir string // action scripts for the scripted brain
+	OpenAIKey  string // never logged
+	// OwnerPassword, if set, becomes the dashboard password when none is set yet. Never logged.
+	OwnerPassword string
+	Model         string        // OpenAI model for the openai brain
+	Reasoning     string        // reasoning effort sent to the model; empty uses the model default
+	BudgetUSD     float64       // hard cap on total model spend; 0 disables
+	NtfyTopic     string        // ntfy.sh topic for alerts; empty disables
+	JobTimeout    time.Duration // a job running longer than this fails with timeout
+	MaxSteps      int           // most screen actions one job may take
 }
 
 // Load reads .env (if present) then the environment. Real environment variables win.
@@ -31,18 +33,19 @@ func Load() Config {
 	loadDotEnv(".env")
 	dataDir := cmp.Or(os.Getenv("SONIC_DATA_DIR"), "data")
 	return Config{
-		Addr:       cmp.Or(os.Getenv("SONIC_ADDR"), "127.0.0.1:8080"), // localhost only unless asked
-		DataDir:    dataDir,
-		PublicURL:  strings.TrimRight(os.Getenv("SONIC_PUBLIC_URL"), "/"),
-		Brain:      cmp.Or(os.Getenv("SONIC_BRAIN"), "openai"),
-		ScriptsDir: cmp.Or(os.Getenv("SONIC_SCRIPTS_DIR"), filepath.Join("scripts")),
-		OpenAIKey:  cmp.Or(os.Getenv("OPENAI_KEY"), os.Getenv("OPENAI_API_KEY")),
-		Model:      cmp.Or(os.Getenv("SONIC_MODEL"), "gpt-6-luna"),
-		Reasoning:  os.Getenv("SONIC_REASONING"),
-		BudgetUSD:  floatEnv("SONIC_BUDGET_USD", 3.00),
-		NtfyTopic:  os.Getenv("SONIC_NTFY_TOPIC"),
-		JobTimeout: durationEnv("SONIC_JOB_TIMEOUT", 10*time.Minute),
-		MaxSteps:   int(floatEnv("SONIC_MAX_STEPS", 40)),
+		Addr:          cmp.Or(os.Getenv("SONIC_ADDR"), "127.0.0.1:8080"), // localhost only unless asked
+		DataDir:       dataDir,
+		PublicURL:     strings.TrimRight(os.Getenv("SONIC_PUBLIC_URL"), "/"),
+		Brain:         cmp.Or(os.Getenv("SONIC_BRAIN"), "openai"),
+		ScriptsDir:    cmp.Or(os.Getenv("SONIC_SCRIPTS_DIR"), filepath.Join("scripts")),
+		OpenAIKey:     cmp.Or(os.Getenv("OPENAI_KEY"), os.Getenv("OPENAI_API_KEY")),
+		OwnerPassword: os.Getenv("SONIC_OWNER_PASSWORD"),
+		Model:         cmp.Or(os.Getenv("SONIC_MODEL"), "gpt-6-luna"),
+		Reasoning:     os.Getenv("SONIC_REASONING"),
+		BudgetUSD:     floatEnv("SONIC_BUDGET_USD", 3.00),
+		NtfyTopic:     os.Getenv("SONIC_NTFY_TOPIC"),
+		JobTimeout:    durationEnv("SONIC_JOB_TIMEOUT", 10*time.Minute),
+		MaxSteps:      int(floatEnv("SONIC_MAX_STEPS", 40)),
 	}
 }
 

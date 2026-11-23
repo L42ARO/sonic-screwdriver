@@ -132,9 +132,9 @@ func (d Deps) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 // OwnerLink is the default sign-in for a self-hosted compute-box, which has one owner.
-// The owner signs in with their password, once they have set one in the dashboard, or
-// with a single-use link that the compute-box prints at startup (or `compute-box
-// login-link` prints on demand). The link also works when the password is forgotten.
+// The owner signs in with their password (from SONIC_OWNER_PASSWORD or set in the
+// dashboard), or with a single-use link from `compute-box login-link`, which is also the
+// way back in when the password is forgotten. Links are never written to the log.
 type OwnerLink struct{ Store *store.Store }
 
 func (OwnerLink) LoginPath() string { return "/login" }

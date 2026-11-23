@@ -68,11 +68,11 @@ machine, everything running locally.
 
 ## Running it
 
-Requirements: Windows, Go, Rust, Python 3, and an OpenAI key in `compute-box/.env` as
-`OPENAI_KEY=...`.
+Requirements: Windows, Go, Rust, Python 3, and in `compute-box/.env` an OpenAI key as
+`OPENAI_KEY=...` and a dashboard password as `SONIC_OWNER_PASSWORD=...`.
 
 ```powershell
-# 1. the compute-box. It prints a one-time dashboard sign-in link; open it.
+# 1. the compute-box. Open http://localhost:8080 and sign in with SONIC_OWNER_PASSWORD.
 cd compute-box; go run .
 # In the dashboard: "Add machine" dentist-front-desk (copy its machine token) and
 # "Create API key" (copy the key). Each is shown only once.
@@ -90,7 +90,8 @@ $env:SONIC_API_KEY = "sonic_sk_..."   # the API key from step 1
 curl http://localhost:8000/patients/P-1004
 ```
 
-Lost the sign-in link? `go run . login-link` prints a new one.
+Forgot the password? `go run . login-link` prints a one-time sign-in link; set a new
+password in the dashboard.
 
 Don't touch the mouse or keyboard while the overlay is showing. To test the plumbing
 without a model, start the compute-box with `SONIC_BRAIN=scripted`.

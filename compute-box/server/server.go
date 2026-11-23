@@ -35,8 +35,9 @@ func ConfigFromEnv() Config { return config.Load() }
 type Options struct {
 	Config Config
 
-	// SignIn decides how people sign in to the dashboard. Default: the owner opens a
-	// single-use link printed at startup or by LoginLink.
+	// SignIn decides how people sign in to the dashboard. Default: the single owner
+	// signs in with a password (Config.OwnerPassword or set in the dashboard), or with a
+	// single-use link from LoginLink.
 	SignIn ext.SignIn
 
 	// Limiter decides how much model usage each user may spend. Default: every user may
@@ -48,7 +49,7 @@ type Options struct {
 	Routes func(mux *http.ServeMux)
 }
 
-// loginLinkTTL is how long a printed sign-in link stays valid.
+// loginLinkTTL is how long a sign-in link from LoginLink stays valid.
 const loginLinkTTL = 24 * time.Hour
 
 // Run starts the compute-box and blocks until ctx is cancelled or the server fails.
@@ -95,15 +96,36 @@ func Run(ctx context.Context, opts Options) error {
 	}()
 
 	if opts.SignIn == nil {
-		link, err := loginLink(ctx, db, cfg)
-		if err != nil {
-			return fmt.Errorf("creating sign-in link: %w", err)
+		if err := ownerPassword(ctx, db, cfg); err != nil {
+			return err
 		}
-		fmt.Printf("Dashboard sign-in link (works once, for 24 hours):\n  %s\n", link)
 	}
 	log.Printf("compute-box on %s (brain: %s)", cfg.Addr, b.Model())
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
+	}
+	return nil
+}
+
+// ownerPassword applies SONIC_OWNER_PASSWORD if the owner has no password yet, and says
+// how to sign in. Credentials are never written to the log.
+func ownerPassword(ctx context.Context, db *store.Store, cfg Config) error {
+	owner := db.DefaultUserID()
+	has, err := db.HasPassword(ctx, owner)
+	if err != nil {
+		return err
+	}
+	if !has && cfg.OwnerPassword != "" {
+		if err := db.SetPassword(ctx, owner, cfg.OwnerPassword, ""); err != nil {
+			return fmt.Errorf("SONIC_OWNER_PASSWORD: %w", err)
+		}
+		has = true
+		log.Printf("dashboard password set from SONIC_OWNER_PASSWORD")
+	}
+	if has {
+		log.Printf("dashboard: %s (sign in with the owner password)", baseURL(cfg))
+	} else {
+		log.Printf("dashboard: %s has no owner password yet: set SONIC_OWNER_PASSWORD, or run `compute-box login-link` for a one-time sign-in link", baseURL(cfg))
 	}
 	return nil
 }

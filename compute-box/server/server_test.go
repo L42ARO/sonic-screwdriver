@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -113,5 +115,56 @@ func TestCustomSignInReplacesTheDefault(t *testing.T) {
 	res, err = browser.Get("http://" + addr + "/hosted/login?as=octocat")
 	if err != nil || res.StatusCode != 200 || res.Request.URL.Path != "/" {
 		t.Fatalf("custom sign-in did not land on the dashboard: %v %v", res, err)
+	}
+}
+
+// SONIC_OWNER_PASSWORD sets the owner's password on first start, but never overrides
+// one that is already set (e.g. changed in the dashboard).
+func TestOwnerPasswordFromConfig(t *testing.T) {
+	data := t.TempDir()
+	start := func(password string) (addr string, stop func()) {
+		l, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		addr = l.Addr().String()
+		l.Close()
+		cfg := server.Config{Addr: addr, DataDir: data, Brain: "scripted", ScriptsDir: t.TempDir(),
+			JobTimeout: time.Minute, MaxSteps: 10, OwnerPassword: password}
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan error, 1)
+		go func() { done <- server.Run(ctx, server.Options{Config: cfg}) }()
+		for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
+			if res, err := http.Get("http://" + addr + "/healthz"); err == nil {
+				res.Body.Close()
+				break
+			}
+		}
+		return addr, func() { cancel(); <-done }
+	}
+	signIn := func(addr, password string) int {
+		req, _ := http.NewRequest("POST", "http://"+addr+"/login", strings.NewReader(url.Values{"password": {password}}.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", "http://"+addr)
+		res, err := (&http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}).Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		return res.StatusCode
+	}
+
+	addr, stop := start("first password")
+	if got := signIn(addr, "first password"); got != 303 {
+		t.Fatalf("sign-in with SONIC_OWNER_PASSWORD: %d", got)
+	}
+	stop()
+	addr, stop = start("second password")
+	defer stop()
+	if got := signIn(addr, "second password"); got != 401 {
+		t.Fatalf("a later SONIC_OWNER_PASSWORD replaced the set password: %d", got)
+	}
+	if got := signIn(addr, "first password"); got != 303 {
+		t.Fatalf("the original password stopped working: %d", got)
 	}
 }

@@ -12,19 +12,22 @@ On any Linux server with Docker and Docker Compose:
 
 ```sh
 cd compute-box
-cp .env.example .env        # add OPENAI_KEY, or set SONIC_BRAIN=scripted to test without a model
+cp .env.example .env        # set SONIC_OWNER_PASSWORD, and OPENAI_KEY (or SONIC_BRAIN=scripted to test without a model)
 docker compose up --build --detach --wait
-docker compose logs compute-box | grep -A1 "sign-in link"   # open it to sign in
 ```
 
+Open `http://<server>:6080` and sign in with `SONIC_OWNER_PASSWORD`.
+
 The box listens on port 6080 on all interfaces (`SONIC_PORT` and `SONIC_PUBLISH_ADDRESS`
-change that). Set `SONIC_PUBLIC_URL` in `.env` (e.g. `http://my-server:6080`) so printed
+change that). Set `SONIC_PUBLIC_URL` in `.env` (e.g. `http://my-server:6080`) so
 sign-in links point at the right address. The dashboard is at `/` and health is at
 `/healthz`. Traffic is plain HTTP unless you put an HTTPS reverse proxy in front (forward
 the `/v1/agent` WebSocket route with upgrade support); credentials and screenshots then
 travel encrypted.
 
-A new sign-in link (works once, for 24 hours):
+Without a password, or if you forget it, get a one-time sign-in link (works once, for 24
+hours) and set a new password in the dashboard. Links are printed only to your terminal,
+never to the logs:
 
 ```sh
 docker compose exec compute-box /app/compute-box login-link
@@ -41,8 +44,8 @@ checks. The build keeps Go's compiler cache in memory, so it also fits small ser
 ### Local Go process
 
 ```powershell
-go run .              # prints a dashboard sign-in link
-go run . login-link   # prints another one, even while the server runs
+go run .              # sign in with SONIC_OWNER_PASSWORD from .env
+go run . login-link   # or print a one-time sign-in link, even while the server runs
 ```
 
 ## Access
@@ -53,8 +56,8 @@ shown once, and stored only as SHA-256 hashes:
 
 | Credential | Used by | How |
 |---|---|---|
-| Sign-in link | the owner's browser | Printed at startup or by `login-link`; works once, for 24 hours. Gives a 30-day session cookie. Also the way back in if the password is forgotten. |
-| Password | the owner's browser | Set under **Sign-in password** in the dashboard (at least 10 characters; stored as salted PBKDF2-SHA256). Setting or changing it signs out other browsers. Five wrong tries lock the address out for 15 minutes. |
+| Password | the owner's browser | `SONIC_OWNER_PASSWORD` sets it on startup while none is set; change it under **Sign-in password** in the dashboard (at least 10 characters; stored as salted PBKDF2-SHA256). Setting or changing it signs out other browsers. Five wrong tries lock the address out for 15 minutes. Gives a 30-day session cookie. |
+| Sign-in link | the owner's browser | `compute-box login-link` prints one to your terminal (never to the logs); works once, for 24 hours. For first sign-in without a password, or a forgotten one. |
 | API key (`sonic_sk_…`) | backends and SDKs | **Create API key**; send as `Authorization: Bearer <key>` (the SDKs read `SONIC_API_KEY`). Revocable. |
 | Machine token (`sonic_mt_…`) | a local-agent | **Add machine**; the token identifies that machine. **Regenerate token** disconnects the agent using the old one; **Remove** deletes the machine (its job history stays). |
 
@@ -75,13 +78,14 @@ Read from the environment, then `.env` (the environment wins).
 | Variable | Default | Meaning |
 |---|---|---|
 | `OPENAI_KEY` | | OpenAI API key. Never logged. |
+| `SONIC_OWNER_PASSWORD` | | Dashboard password, applied on startup while none is set (at least 10 characters). Never logged. |
 | `SONIC_MODEL` | `gpt-6-luna` | Model for the OpenAI brain. Only priced models are accepted. |
 | `SONIC_REASONING` | model default | Reasoning effort sent to the model. |
 | `SONIC_BRAIN` | `openai` | `scripted` replays `scripts/<operation>.json` instead of using a model. |
 | `SONIC_BUDGET_USD` | `3.00` | Model spend cap per user (0 = none). Their new model calls are refused past it. |
 | `SONIC_NTFY_TOPIC` | | ntfy.sh topic for alerts (budget cap reached). |
 | `SONIC_ADDR` | `127.0.0.1:8080` | Listen address. Localhost only unless changed. |
-| `SONIC_PUBLIC_URL` | from `SONIC_ADDR` | How people reach this server, used in printed sign-in links. |
+| `SONIC_PUBLIC_URL` | from `SONIC_ADDR` | How people reach this server, used in sign-in links and the startup log. |
 | `SONIC_DATA_DIR` | `data` | SQLite database and job screenshots. |
 | `SONIC_JOB_TIMEOUT` | `10m` | A job running longer fails with `timeout`. |
 | `SONIC_MAX_STEPS` | `40` | Most screen actions one job may take. |

@@ -19,11 +19,12 @@
     </form>
     <p class="note">Forgot it? Sign in with a link (below) and set a new one.</p>
   {{else}}
-    <p>Open the sign-in link the compute-box printed when it started. Each link works once
-       and expires after a day. Once signed in, you can set a password.</p>
+    <p>No password is set yet. Set <code>SONIC_OWNER_PASSWORD</code> in the server's
+       <code>.env</code> and restart it, or sign in once with a link (below) and set a
+       password in the dashboard.</p>
   {{end}}
   {{if not .Token}}
-    <p class="note">New sign-in link: on the server run <code>compute-box login-link</code>,
+    <p class="note">One-time sign-in link (works once, for 24 hours): on the server run <code>compute-box login-link</code>,
        or with Docker <code>docker compose exec compute-box /app/compute-box login-link</code>.</p>
   {{end}}
 </section>

@@ -1,8 +1,8 @@
 // compute-box: the brain of sonic-screwdriver. It serves the caller API, holds the
 // connections from local-agents, and runs each job with a model that drives the screen.
 //
-//	go run .              start the server; prints a dashboard sign-in link
-//	go run . login-link   print a new sign-in link (works while the server runs)
+//	go run .              start the server
+//	go run . login-link   print a one-time dashboard sign-in link (works while the server runs)
 //
 // Programs that embed the compute-box import the server package instead.
 package main
