@@ -129,3 +129,25 @@ func TestDemoAndPlayground(t *testing.T) {
 	session, _ := box.db.CreateSession(context.Background(), other, time.Hour)
 	expect(t, do(t, "GET", u+"/projects", "", map[string]string{"Cookie": "sonic_session=" + session}), 200, "No projects yet")
 }
+
+// The logo files are public (the sign-in page shows them) and every page links to them.
+func TestLogoFiles(t *testing.T) {
+	box := newBox(t)
+	u := box.srv.URL
+	for path, contentType := range map[string]string{
+		"/logo.svg": "image/svg+xml", "/favicon.svg": "image/svg+xml",
+		"/favicon.ico": "image/x-icon", "/apple-touch-icon.png": "image/png",
+	} {
+		res := do(t, "GET", u+path, "", nil)
+		if res.StatusCode != 200 || res.Header.Get("Content-Type") != contentType || res.ContentLength == 0 {
+			t.Fatalf("%s: %d %s", path, res.StatusCode, res.Header.Get("Content-Type"))
+		}
+		res.Body.Close()
+	}
+	page := body(t, do(t, "GET", u+"/login", "", nil))
+	for _, want := range []string{`href="/favicon.svg"`, `href="/favicon.ico"`, `href="/apple-touch-icon.png"`, `src="/logo.svg"`} {
+		if !strings.Contains(page, want) {
+			t.Fatalf("sign-in page is missing %s", want)
+		}
+	}
+}

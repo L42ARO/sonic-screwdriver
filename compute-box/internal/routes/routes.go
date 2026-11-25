@@ -12,6 +12,7 @@ import (
 	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/services/jobs"
 	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/store"
 	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/utils"
+	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/web"
 )
 
 // Deps are the services the handlers use.
@@ -30,6 +31,11 @@ type Deps struct {
 // New returns the compute-box's HTTP handler.
 func New(d Deps) http.Handler {
 	mux := http.NewServeMux()
+	// The logo: one file used by every page and as the favicon. Public, for the sign-in page.
+	mux.HandleFunc("GET /logo.svg", web.Asset("logo.svg", "image/svg+xml"))
+	mux.HandleFunc("GET /favicon.svg", web.Asset("logo.svg", "image/svg+xml"))
+	mux.HandleFunc("GET /favicon.ico", web.Asset("favicon.ico", "image/x-icon"))
+	mux.HandleFunc("GET /apple-touch-icon.png", web.Asset("apple-touch-icon.png", "image/png"))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		utils.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})

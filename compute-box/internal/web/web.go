@@ -15,6 +15,25 @@ import (
 //go:embed templates/*.html
 var files embed.FS
 
+// static/logo.svg is the logo; favicon.ico and apple-touch-icon.png are generated from it
+// by static/build_icons.py.
+//
+//go:embed static/logo.svg static/favicon.ico static/apple-touch-icon.png
+var static embed.FS
+
+// Asset serves one of the logo files, public and cacheable for a day.
+func Asset(name, contentType string) http.HandlerFunc {
+	body, err := static.ReadFile("static/" + name)
+	if err != nil {
+		panic(err)
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		w.Write(body)
+	}
+}
+
 var pages = template.Must(template.New("").Funcs(template.FuncMap{
 	"ago":     ago,
 	"money":   func(v float64) string { return fmt.Sprintf("$%.4f", v) },
