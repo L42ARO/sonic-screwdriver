@@ -90,7 +90,7 @@ fn run() -> Result<()> {
         Some(Cmd::Connect { url, token }) => {
             let Some(_instance) = settings::SingleInstance::acquire()? else { return Ok(()) };
             let saved = settings::load()?;
-            let url = url.or_else(|| saved.as_ref().map(|p|p.server_url.clone())).unwrap_or_else(||"http://localhost:8080".into());
+            let url = url.or_else(|| saved.as_ref().map(|p|p.server_url.clone())).unwrap_or_else(||settings::DEFAULT_SERVER_URL.into());
             let token = match token { Some(token)=>token, None=>settings::read_token(saved.as_ref().context("Set --token, SONIC_MACHINE_TOKEN, or configure the desktop app")?)? };
             if token.trim().is_empty() { anyhow::bail!("Machine token cannot be empty") }
             let instance_id = match saved { Some(p)=>p.instance_id,None=>settings::random_id()? };

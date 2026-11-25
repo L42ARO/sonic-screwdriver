@@ -69,7 +69,9 @@ const change = await updateBalance({ patientId: "P-1004", balance: 0 }); // type
 - Calls validate input before sending and output before returning, and throw
   `SonicError` with a stable `code` on failure.
 - Per-call options go in a second argument: `{ idempotencyKey, machine, onStep }`.
-- `SONIC_URL` and `SONIC_API_KEY` environment variables configure the connection.
+- `SONIC_URL` and `SONIC_API_KEY` environment variables configure the connection. Without
+  `SONIC_URL`, the SDK uses the hosted compute-box at `https://app.sonicscrew.click`; set it (for
+  example `http://localhost:8080`) to use your own.
 - Zod 4 is a peer dependency, so the SDK uses the app's own copy.
 
 Build: `npm install && npm run build`. Apps in this repo install it with

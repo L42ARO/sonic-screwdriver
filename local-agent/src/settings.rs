@@ -66,11 +66,14 @@ pub struct Profile {
     pub instance_id: String,
     pub credential_id: String,
 }
+/// The hosted compute-box; self-hosters change it in Settings or with `connect --url`.
+pub const DEFAULT_SERVER_URL: &str = "https://app.sonicscrew.click";
+
 impl Profile {
     pub fn new() -> Result<Self> {
         Ok(Self {
             version: 1,
-            server_url: "http://localhost:8080".into(),
+            server_url: DEFAULT_SERVER_URL.into(),
             machine: "".into(),
             start_at_signin: false,
             instance_id: random_id()?,

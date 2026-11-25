@@ -23,6 +23,10 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
+# The hosted compute-box, used when neither `url` nor SONIC_URL is set.
+DEFAULT_URL = "https://app.sonicscrew.click"
+
+
 @dataclass(frozen=True)
 class Step:
     """One action the agent took, streamed while a job runs."""
@@ -36,7 +40,8 @@ class Sonic:
 
     `machine` is the local-agent jobs run on by default. `context` is added to every
     operation's instructions, for things all of them need (such as how to log in).
-    `url` and `api_key` default to the SONIC_URL and SONIC_API_KEY environment variables.
+    `url` and `api_key` default to the SONIC_URL and SONIC_API_KEY environment variables;
+    without SONIC_URL, `url` is the hosted compute-box (DEFAULT_URL).
     """
 
     def __init__(
@@ -53,7 +58,7 @@ class Sonic:
         self.machine = machine
         self.context = context.strip()
         self.programs = programs
-        self.url = url or os.getenv("SONIC_URL", "http://localhost:8080")
+        self.url = url or os.getenv("SONIC_URL") or DEFAULT_URL
         self.api_key = api_key or os.getenv("SONIC_API_KEY")
         self.operations: dict[str, Operation] = {}
         self._http: httpx.AsyncClient | None = None

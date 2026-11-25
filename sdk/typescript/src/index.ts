@@ -14,7 +14,7 @@
  *   await dentasoft.sync();                                  // once, at startup
  *   const patient = await lookupPatient({ patientId: "P-1004" });
  */
-export { Sonic, Machine } from "./client.js";
+export { Sonic, Machine, DEFAULT_URL } from "./client.js";
 export type { Program, InstalledProgram, MachineOptions } from "./client.js";
 export type { Definition, Operation, OperationSpec, RunOptions, SonicOptions, Step } from "./client.js";
 export { SonicError } from "./errors.js";

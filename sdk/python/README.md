@@ -77,7 +77,9 @@ change = await update_balance("P-1004", balance=0)      # typed result
 - Calls validate arguments before sending and validate the result before returning.
   Failures raise `SonicError` with a stable `code`.
 - Per-call options: `await update_balance.with_options(idempotency_key="inv-5521")(...)`.
-- `SONIC_URL` and `SONIC_API_KEY` environment variables configure the connection.
+- `SONIC_URL` and `SONIC_API_KEY` environment variables configure the connection. Without
+  `SONIC_URL`, the SDK uses the hosted compute-box at `https://app.sonicscrew.click`; set it (for
+  example `http://localhost:8080`) to use your own.
 
 Install locally: `pip install -e sdk/python`.
 

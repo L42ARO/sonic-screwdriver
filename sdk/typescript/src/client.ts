@@ -11,6 +11,9 @@ import { z } from "zod";
 import { SonicError } from "./errors.js";
 import { events } from "./sse.js";
 
+/** The hosted compute-box, used when neither `url` nor SONIC_URL is set. */
+export const DEFAULT_URL = "https://app.sonicscrew.click";
+
 export interface Program {
   description: string;
   instructions?: string;
@@ -40,7 +43,7 @@ export interface SonicOptions {
   context?: string;
   /** Omit to preserve existing configuration; {} explicitly clears it. */
   programs?: Record<string, Program>;
-  /** Defaults to the SONIC_URL environment variable, then http://localhost:8080. */
+  /** Defaults to the SONIC_URL environment variable, then DEFAULT_URL (the hosted compute-box). */
   url?: string;
   /** Defaults to the SONIC_API_KEY environment variable. */
   apiKey?: string;
@@ -95,7 +98,7 @@ export class Sonic {
     this.machine = options.machine;
     this.context = (options.context ?? "").trim();
     this.programs = options.programs;
-    this.url = (options.url ?? process.env.SONIC_URL ?? "http://localhost:8080").replace(/\/$/, "");
+    this.url = (options.url ?? (process.env.SONIC_URL || DEFAULT_URL)).replace(/\/$/, "");
     this.apiKey = options.apiKey ?? process.env.SONIC_API_KEY;
   }
 

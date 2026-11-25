@@ -55,7 +55,9 @@ change, err := UpdateBalance.Run(ctx, UpdateBalanceInput{PatientID: "P-1004"})
 - Per-call options: `sonic.IdempotencyKey`, `sonic.OnMachine`, `sonic.OnStep`.
 - The input is checked by the compute-box against the schema; Go's type system covers the
   rest on the caller's side.
-- `SONIC_URL` and `SONIC_API_KEY` environment variables configure the connection.
+- `SONIC_URL` and `SONIC_API_KEY` environment variables configure the connection. Without
+  `SONIC_URL`, the SDK uses the hosted compute-box at `https://app.sonicscrew.click`; set it (for
+  example `http://localhost:8080`) to use your own.
 
 Install with `go get github.com/L42ARO/sonic-screwdriver/sdk/go` and import it as
 `sonic "github.com/L42ARO/sonic-screwdriver/sdk/go"`. Apps in this repo use the local copy

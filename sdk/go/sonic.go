@@ -55,7 +55,10 @@ func WithContext(text string) Option {
 	return func(p *Project) { p.Context = strings.TrimSpace(dedent(text)) }
 }
 
-// WithURL sets the compute-box address. Defaults to SONIC_URL, then http://localhost:8080.
+// DefaultURL is the hosted compute-box, used when neither WithURL nor SONIC_URL is set.
+const DefaultURL = "https://app.sonicscrew.click"
+
+// WithURL sets the compute-box address. Defaults to SONIC_URL, then DefaultURL.
 func WithURL(url string) Option { return func(p *Project) { p.URL = url } }
 
 // WithAPIKey sets the API key. Defaults to SONIC_API_KEY.
@@ -70,7 +73,7 @@ func NewProject(name string, opts ...Option) *Project {
 		http:   &http.Client{}, // jobs stream for minutes; the caller's context bounds each call
 	}
 	if p.URL == "" {
-		p.URL = "http://localhost:8080"
+		p.URL = DefaultURL
 	}
 	for _, opt := range opts {
 		opt(p)

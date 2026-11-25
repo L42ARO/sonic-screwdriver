@@ -80,11 +80,13 @@ cd compute-box; go run .
 # 2. the local-agent, on the machine with DentaSoft
 cd local-agent; cargo build --release
 .\target\release\local-agent.exe
-# In setup: URL http://localhost:8080 and the machine token (not the OpenAI key).
+# In setup: URL http://localhost:8080 (the default is the hosted https://app.sonicscrew.click)
+# and the machine token (not the OpenAI key).
 
 # 3. Python sample: startup registers the machine installation and project automatically
 # The agent can open DentaSoft when needed.
 cd test-source\python-clinic-backend
+$env:SONIC_URL = "http://localhost:8080"   # the local compute-box from step 1
 $env:SONIC_API_KEY = "sonic_sk_..."   # the API key from step 1
 .\.venv\Scripts\uvicorn main:app
 curl http://localhost:8000/patients/P-1004
