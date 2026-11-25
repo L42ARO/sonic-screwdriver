@@ -16,6 +16,7 @@
   }
   * { box-sizing:border-box; }
   html { -webkit-text-size-adjust:100%; }
+  html { touch-action: manipulation; } /* no double-tap zoom */
   body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing:antialiased; }
   a { color:inherit; text-decoration:none; }
   code, pre, .mono { font-family:var(--mono); font-size:12.5px; }
@@ -177,6 +178,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>{{.Title}} · sonic-screwdriver</title>
 {{template "styles"}}
+<script>
+  // iOS Safari ignores user-scalable=no; stop pinch zoom there by cancelling the gesture.
+  for (const type of ["gesturestart", "gesturechange", "gestureend"])
+    document.addEventListener(type, e => e.preventDefault(), { passive: false });
+  document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+</script>
 </head>
 <body>
 <div class="shell">

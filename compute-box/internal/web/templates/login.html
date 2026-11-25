@@ -10,6 +10,12 @@
   .login { width:100%; max-width:380px; }
   .login .brand { padding:0 0 28px; }
 </style>
+<script>
+  // iOS Safari ignores user-scalable=no; stop pinch zoom there by cancelling the gesture.
+  for (const type of ["gesturestart", "gesturechange", "gestureend"])
+    document.addEventListener(type, e => e.preventDefault(), { passive: false });
+  document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+</script>
 </head>
 <body>
 <div class="login">
