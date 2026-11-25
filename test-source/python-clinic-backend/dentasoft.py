@@ -13,21 +13,27 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 from sonic_screwdriver import Sonic, Program, Machine, InstalledProgram
 
-# This demo runs beside its local-agent by default. Overrides refer to paths on the
-# agent's Windows machine when this backend runs elsewhere.
-_script = os.getenv("DENTASOFT_SCRIPT", str(
-    Path(__file__).resolve().parents[2] / "test-target" / "dentasoft" / "dentasoft.py"
-))
+# Where DentaSoft is on the agent's Windows machine. Paths are resolved there, not here.
+# By default: DentaSoft.exe from the release zip, in the demo folder beside local-agent.exe
+# (the agent expands %SONIC_AGENT_DIR% to its own folder). DENTASOFT_EXECUTABLE points
+# elsewhere. To run the demo from a source checkout instead, set DENTASOFT_SCRIPT to
+# test-target\dentasoft\dentasoft.py (and DENTASOFT_PYTHON to the python.exe to run it with).
+_script = os.getenv("DENTASOFT_SCRIPT")
+if _script:
+    _dentasoft = InstalledProgram(
+        executable=os.getenv("DENTASOFT_PYTHON", getattr(sys, "_base_executable", sys.executable)),
+        args=[_script],
+        working_directory=ntpath.dirname(_script),
+        window_title_contains="DentaSoft",
+    )
+else:
+    _dentasoft = InstalledProgram(
+        executable=os.getenv("DENTASOFT_EXECUTABLE", r"%SONIC_AGENT_DIR%\demo\DentaSoft.exe"),
+        window_title_contains="DentaSoft",
+    )
 front_desk = Machine(
     name=os.getenv("DENTASOFT_MACHINE", "demo-machine"),
-    programs={
-        "dentasoft": InstalledProgram(
-            executable=os.getenv("DENTASOFT_PYTHON", getattr(sys, "_base_executable", sys.executable)),
-            args=[_script],
-            working_directory=ntpath.dirname(_script),
-            window_title_contains="DentaSoft",
-        ),
-    },
+    programs={"dentasoft": _dentasoft},
 )
 
 # This app's project on the compute-box. SONIC_URL and SONIC_API_KEY set the connection.

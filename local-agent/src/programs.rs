@@ -35,6 +35,72 @@ pub struct Installation {
     pub startup_timeout_ms: u64,
 }
 
+impl Installation {
+    /// Expands Windows-style `%NAME%` environment variables in the executable, arguments
+    /// and working directory, on this machine. Configurations can then name locations that
+    /// differ per computer without revealing anyone's user folder. `%SONIC_AGENT_DIR%` is
+    /// the folder holding local-agent.exe, so programs shipped beside it work wherever the
+    /// release was unpacked. Text like `50%` that is not a variable is left alone.
+    pub fn expanded(&self) -> Result<Installation> {
+        let lookup = |name: &str| -> Option<String> {
+            if let Some(value) = std::env::var(name).ok().filter(|v| !v.is_empty()) {
+                return Some(value);
+            }
+            if name.eq_ignore_ascii_case("SONIC_AGENT_DIR") {
+                return std::env::current_exe()
+                    .ok()?
+                    .parent()
+                    .map(|dir| dir.display().to_string());
+            }
+            None
+        };
+        Ok(Installation {
+            executable: expand_vars(&self.executable, &lookup)?,
+            args: self
+                .args
+                .iter()
+                .map(|a| expand_vars(a, &lookup))
+                .collect::<Result<_>>()?,
+            working_directory: expand_vars(&self.working_directory, &lookup)?,
+            ..self.clone()
+        })
+    }
+}
+
+fn expand_vars(text: &str, lookup: &dyn Fn(&str) -> Option<String>) -> Result<String> {
+    let is_name = |name: &str| {
+        name.chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+            && name.chars().all(|c| c.is_ascii_alphanumeric() || "_()".contains(c))
+    };
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(start) = rest.find('%') {
+        out.push_str(&rest[..start]);
+        let after = &rest[start + 1..];
+        match after.find('%') {
+            Some(end) if is_name(&after[..end]) => {
+                let name = &after[..end];
+                let value = lookup(name).ok_or_else(|| {
+                    error(
+                        "invalid_launch_configuration",
+                        format!("%{name}% is not set on this machine"),
+                    )
+                })?;
+                out.push_str(&value);
+                rest = &after[end + 1..];
+            }
+            _ => {
+                out.push('%');
+                rest = after;
+            }
+        }
+    }
+    out.push_str(rest);
+    Ok(out)
+}
+
 #[derive(Debug)]
 pub struct AppError {
     pub code: &'static str,
@@ -243,6 +309,44 @@ impl Launcher {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn variables_expand_on_this_machine() {
+        let lookup = |name: &str| match name {
+            "SONIC_AGENT_DIR" => Some(r"D:\Tools\sonic".to_string()),
+            "LOCALAPPDATA" => Some(r"C:\Users\someone\AppData\Local".to_string()),
+            _ => None,
+        };
+        let expand = |s: &str| expand_vars(s, &lookup);
+        assert_eq!(
+            expand(r"%SONIC_AGENT_DIR%\demo\DentaSoft.exe").unwrap(),
+            r"D:\Tools\sonic\demo\DentaSoft.exe"
+        );
+        assert_eq!(
+            expand(r"%LOCALAPPDATA%\x %SONIC_AGENT_DIR%").unwrap(),
+            r"C:\Users\someone\AppData\Local\x D:\Tools\sonic"
+        );
+        assert_eq!(expand(r"C:\Apps\app.exe").unwrap(), r"C:\Apps\app.exe");
+        // Not variables: left as written.
+        assert_eq!(expand("50% off, 100%").unwrap(), "50% off, 100%");
+        assert_eq!(expand("%").unwrap(), "%");
+        assert_eq!(expand("%% %1 %").unwrap(), "%% %1 %");
+        // A variable this machine lacks is an error, not a half-expanded path.
+        let err = expand(r"%NOPE%\app.exe").unwrap_err();
+        assert!(err.to_string().contains("%NOPE% is not set"), "{err}");
+    }
+    #[test]
+    fn agent_dir_defaults_to_the_executable_folder() {
+        if std::env::var("SONIC_AGENT_DIR").is_ok() {
+            return;
+        }
+        let mut app = installation();
+        app.executable = r"%SONIC_AGENT_DIR%\demo\app.exe".into();
+        app.args = vec![r"%SONIC_AGENT_DIR%\demo\data.json".into(), "50%".into()];
+        let expanded = app.expanded().unwrap();
+        let dir = std::env::current_exe().unwrap().parent().unwrap().display().to_string();
+        assert_eq!(expanded.executable, format!(r"{dir}\demo\app.exe"));
+        assert_eq!(expanded.args, vec![format!(r"{dir}\demo\data.json"), "50%".to_string()]);
+    }
     fn installation() -> Installation {
         Installation {
             executable: r"C:\Apps\app.exe".into(),

@@ -44,10 +44,17 @@ func TestProgramConfigurationAndLaunchResolution(t *testing.T) {
 	expect(t, do(t, "GET", projectURL, "", nil), 200, "Patient records")
 	expect(t, do(t, "GET", machineURL, "", nil), 200, `"billing"`)
 	// Validation fails atomically instead of deleting existing configuration.
-	for _, bad := range []string{`null`, `{"bad":{"executable":"relative.exe","window_title_contains":"X"}}`, `{"bad":{"executable":"C:\\Apps\\a.exe","window_title_contains":""}}`, `{"bad":{"executable":"C:\\a.exe","window_title_contains":"A","startup_timeout_ms":120001}}`} {
+	for _, bad := range []string{`null`, `{"bad":{"executable":"relative.exe","window_title_contains":"X"}}`, `{"bad":{"executable":"C:\\Apps\\a.exe","window_title_contains":""}}`, `{"bad":{"executable":"C:\\a.exe","window_title_contains":"A","startup_timeout_ms":120001}}`,
+		// A variable must start the path and be followed by a separator; anything else is relative.
+		`{"bad":{"executable":"%APPDATA%","window_title_contains":"X"}}`, `{"bad":{"executable":"app%X%\\a.exe","window_title_contains":"X"}}`, `{"bad":{"executable":"%1%\\a.exe","window_title_contains":"X"}}`} {
 		expect(t, do(t, "PUT", machineURL, bad, nil), 400, "invalid_definition")
 	}
 	expect(t, do(t, "GET", machineURL, "", nil), 200, `"billing"`)
+	// Paths may start with a variable the agent expands on its own machine, alongside
+	// ordinary absolute paths anywhere on the computer.
+	expect(t, do(t, "PUT", srv.URL+"/v1/machines/vars/programs",
+		`{"demo":{"executable":"%SONIC_AGENT_DIR%\\demo\\DentaSoft.exe","window_title_contains":"DentaSoft"},`+
+			`"mine":{"executable":"E:\\Clinic Apps\\x.exe","working_directory":"%LOCALAPPDATA%\\x","window_title_contains":"X"}}`, nil), 200, `%SONIC_AGENT_DIR%`)
 	// A second machine has its own installation, and configuration survives reconnect.
 	expect(t, do(t, "PUT", srv.URL+"/v1/machines/other/programs", `{"dentasoft":{"executable":"D:\\Legacy\\DentaSoft.exe","window_title_contains":"DentaSoft"}}`, nil), 200, `D:\\Legacy`)
 	ctx, cancel := context.WithCancel(context.Background())

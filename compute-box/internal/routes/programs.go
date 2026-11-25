@@ -3,6 +3,7 @@ package routes
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/store"
@@ -63,7 +64,7 @@ func (d Deps) machinePrograms(w http.ResponseWriter, r *http.Request) {
 		for id, p := range programs {
 			if !nameRE.MatchString(id) || !absoluteWindowsPath(p.Executable) || strings.TrimSpace(p.WindowTitleContains) == "" ||
 				(p.WorkingDirectory != "" && !absoluteWindowsPath(p.WorkingDirectory)) || p.StartupTimeoutMS < 0 || p.StartupTimeoutMS > 120000 {
-				programError(w, fmt.Sprintf("%s: require an absolute Windows executable path, window_title_contains, optional absolute working_directory, and startup_timeout_ms from 0 to 120000 (0 defaults to 30000)", id))
+				programError(w, fmt.Sprintf(`%s: require an absolute Windows executable path (C:\..., \\server\share\..., or starting with a variable like %%SONIC_AGENT_DIR%%\...), window_title_contains, optional absolute working_directory, and startup_timeout_ms from 0 to 120000 (0 defaults to 30000)`, id))
 				return
 			}
 			if strings.ContainsRune(p.Executable+p.WorkingDirectory+p.WindowTitleContains, 0) {
@@ -90,12 +91,16 @@ func (d Deps) machinePrograms(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, programs)
 }
 
-// The server may run on Linux while the executor is Windows.
+// The server may run on Linux while the executor is Windows. A path may also start with
+// an environment variable (%LOCALAPPDATA%\..., %SONIC_AGENT_DIR%\...) that the local-agent
+// expands on its own machine, so one configuration works on every computer.
 func absoluteWindowsPath(path string) bool {
 	drive := len(path) >= 3 && ((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) && path[1] == ':' && (path[2] == '\\' || path[2] == '/')
 	unc := strings.HasPrefix(path, `\\`) && len(strings.Split(strings.Trim(path, `\`), `\`)) >= 3
-	return drive || unc
+	return drive || unc || variablePathRE.MatchString(path)
 }
+
+var variablePathRE = regexp.MustCompile(`^%[A-Za-z_][A-Za-z0-9_()]*%[\\/].`)
 
 func programError(w http.ResponseWriter, message string) {
 	utils.WriteError(w, utils.NewError(http.StatusBadRequest, "invalid_definition", message))

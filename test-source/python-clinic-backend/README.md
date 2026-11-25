@@ -69,10 +69,13 @@ $env:DENTASOFT_MACHINE = "demo-machine"
 
 Then `GET http://localhost:8000/patients/P-1004`, or open `http://localhost:8000/docs`.
 
-Defaults use this computer's base Python interpreter and the bundled DentaSoft script.
-The agent can open DentaSoft when needed; startup does not launch it or reset patient data.
-If the backend runs on a different machine, set `DENTASOFT_PYTHON` and `DENTASOFT_SCRIPT`
-to absolute paths on the agent's Windows computer. This demo declares the machine's
+By default the agent opens `DentaSoft.exe` from the release zip: the `demo` folder next to
+`local-agent.exe` (`%SONIC_AGENT_DIR%\demo\DentaSoft.exe`, expanded by the agent on its own
+computer). Set `DENTASOFT_EXECUTABLE` if it is somewhere else. To run DentaSoft from this
+source checkout instead, set `DENTASOFT_SCRIPT` to the absolute path of
+`test-target\dentasoft\dentasoft.py` (and optionally `DENTASOFT_PYTHON` to the python.exe
+that runs it). Paths are always on the agent's Windows computer. The agent can open
+DentaSoft when needed; startup does not launch it or reset patient data. This demo declares the machine's
 complete program registry; add other installations to `front_desk.programs` if sharing it.
 
 ## Compute-box API this sample relies on

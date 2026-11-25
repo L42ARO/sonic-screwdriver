@@ -75,7 +75,7 @@ impl Executor {
                 r.screenshot = Some(self.screen.screenshot()?);
             }
             Action::LaunchProgram { installation } => {
-                let window = self.launcher.open(installation)?;
+                let window = self.launcher.open(&installation.expanded()?)?;
                 self.focus(&window, &mut r)?;
             }
             Action::Screenshot => {
