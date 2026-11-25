@@ -1,180 +1,78 @@
 {{define "home.html"}}
-{{template "head" "Dashboard"}}
-<header><h1>Dashboard</h1><span class="muted">projects, operations and programs change through the SDK</span></header>
+{{template "head" .}}
+<div class="head">
+  <div><h1>Overview</h1><p>Your machines, jobs and model spend at a glance.</p></div>
+  <div class="actions"><a class="btn primary" href="/playground">{{template "icon" "playground"}}Open Playground</a></div>
+</div>
+
+{{if not .AllDone}}
+<section class="card" id="start" style="margin-bottom:16px">
+  <div class="card-head">
+    <div><h2>Get started</h2><p class="meta" style="margin-top:2px">Run DentaSoft, a 1998-style desktop app with no API, from your own code.</p></div>
+    <span class="progress">{{.DoneCount}} of 4<span class="bar"><i style="width:{{percent .DoneCount 4}}%"></i></span></span>
+  </div>
+  <div>
+    <div class="step {{if .HasDemo}}done{{end}}">
+      <span class="n">{{if .HasDemo}}✓{{else}}1{{end}}</span>
+      <div class="what"><strong>Add the demo project</strong>
+        <p>Creates <code>{{.Demo.Project}}</code> with DentaSoft's operations and a machine called <code>{{.Demo.Machine}}</code>.</p></div>
+      <div class="actions">{{if .HasDemo}}<a class="btn sm" href="/projects/{{.Demo.Project}}">View project</a>{{else}}
+        <form method="post" action="/dashboard/demo"><button class="btn sm accent" type="submit">Add demo project</button></form>{{end}}</div>
+    </div>
+    <div class="step {{if .AgentConnected}}done{{end}}">
+      <span class="n">{{if .AgentConnected}}✓{{else}}2{{end}}</span>
+      <div class="what"><strong>Install the local agent on a Windows computer</strong>
+        <p>Download and unzip it (DentaSoft is included in its <code>demo</code> folder). Generate a token for
+          <code>{{.Demo.Machine}}</code> and paste it into the agent's Settings with the URL <code>{{.ServerURL}}</code>.</p></div>
+      <div class="actions">
+        <a class="btn sm" href="{{.AgentDownload}}">Download for Windows</a>
+        {{if .DemoHasToken}}<a class="btn sm" href="/machines#machine-{{.Demo.Machine}}">Machines</a>{{else}}
+        <form method="post" action="/dashboard/machines"><input type="hidden" name="name" value="{{.Demo.Machine}}"><button class="btn sm" type="submit">Generate token</button></form>{{end}}
+      </div>
+    </div>
+    <div class="step {{if .HasJob}}done{{end}}">
+      <span class="n">{{if .HasJob}}✓{{else}}3{{end}}</span>
+      <div class="what"><strong>Run your first job</strong>
+        <p>Look up a patient in the Playground and watch the agent drive DentaSoft, step by step.</p></div>
+      <div class="actions"><a class="btn sm {{if and .HasDemo (not .HasJob)}}accent{{end}}" href="/playground">Open Playground</a></div>
+    </div>
+    <div class="step {{if .HasKey}}done{{end}}">
+      <span class="n">{{if .HasKey}}✓{{else}}4{{end}}</span>
+      <div class="what"><strong>Call it from your code</strong>
+        <p>Create an API key; the SDKs read it from <code>SONIC_API_KEY</code>. The Playground shows the matching code.</p></div>
+      <div class="actions"><a class="btn sm" href="/keys">Create API key</a></div>
+    </div>
+  </div>
+</section>
+{{end}}
 
 <section class="stats" id="stats" data-live>
-  <div class="stat"><span class="label">Machines online</span><span class="value">{{.Online}} / {{len .Machines}}</span></div>
-  <div class="stat"><span class="label">Projects</span><span class="value">{{len .Projects}}</span></div>
-  <div class="stat"><span class="label">Jobs running · queued</span><span class="value">{{.Running}} · {{.Queued}}</span></div>
-  <div class="stat"><span class="label">Model spend</span><span class="value">{{money .Spent}}</span><span class="muted">of {{money .Cap}}</span></div>
+  <div class="stat"><div class="label">Machines online</div><div class="value">{{.Online}} <small>/ {{len .Machines}}</small></div></div>
+  <div class="stat"><div class="label">Jobs running</div><div class="value">{{.Running}} <small>· {{.Queued}} queued</small></div></div>
+  <div class="stat"><div class="label">Projects</div><div class="value">{{len .Projects}}</div></div>
+  <div class="stat"><div class="label">Model spend</div><div class="value">{{money .Spent}}{{if .Cap}} <small>of {{money .Cap}}</small>{{end}}</div></div>
 </section>
 
-<div class="cols">
-<section id="machines-section">
-  <div class="title"><h2 class="section">Machines</h2>
-    <form class="inline" method="post" action="/dashboard/machines">
-      <input name="name" required pattern="[A-Za-z][A-Za-z0-9_\-]{0,63}" placeholder="new-machine-name" aria-label="New machine name">
-      <button type="submit">Add machine</button>
-    </form></div>
-  <div id="machines" data-live>
-  {{range .Machines}}
-  <div class="card" id="machine-{{.Name}}">
-    <div class="title"><span><span class="dot {{if .Online}}on{{end}}"></span><strong>{{.Name}}</strong></span>
-      <span class="muted">{{if .Online}}online{{else if .LastSeen}}offline · seen {{ago .LastSeen}}{{else}}never connected{{end}}</span></div>
-    <div class="grid">
-      <span>Now</span>
-      <span>{{with .Current}}<a href="/jobs/{{.ID}}">{{.Project}} / {{.Operation}}</a> <span class="s-running">· {{.Steps}} steps</span>{{else}}idle{{end}}</span>
-      <span>Queued</span><span>{{if .Queued}}<span class="s-queued">{{.Queued}} waiting</span>{{else}}none{{end}}</span>
-      {{if .Screen}}<span>Screen</span><span>{{screen .Screen}}</span>{{end}}
-      <span>Token</span><span>{{if .TokenPrefix}}<code>{{.TokenPrefix}}</code> <span class="muted">· issued {{ago .TokenCreatedAt}}</span>{{else}}<span class="s-queued">none yet: generate one to connect an agent</span>{{end}}</span>
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Recent jobs</h2><a class="meta link" href="/jobs">View all</a></div>
+    <div class="rows" id="recent-jobs" data-live>
+      {{template "job-rows" .Jobs}}
+      {{if not .Jobs}}<p class="muted">No jobs yet. Run one from the <a class="link" href="/playground">Playground</a>.</p>{{end}}
     </div>
-    <div class="actions">
-      <form method="post" action="/dashboard/machines/{{.Name}}/token"{{if .TokenPrefix}} onsubmit="return confirm('Replace the token for {{.Name}}? Its agent disconnects until you paste the new token.')"{{end}}>
-        <button type="submit">{{if .TokenPrefix}}Regenerate token{{else}}Generate token{{end}}</button></form>
-      <form method="post" action="/dashboard/machines/{{.Name}}/remove" onsubmit="return confirm('Remove {{.Name}}? Its token and installed programs are deleted; job history stays.')">
-        <button type="submit" class="danger">Remove</button></form>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Machines</h2><a class="meta link" href="/machines">Manage</a></div>
+    <div class="rows" id="machine-status" data-live>
+      {{range .Machines}}
+      <a class="row-link" href="/machines#machine-{{.Name}}">
+        <span><span class="name">{{.Name}}</span>{{with .Current}} <span class="meta">· running {{.Operation}}</span>{{end}}{{if .Queued}} <span class="meta">· {{.Queued}} queued</span>{{end}}</span>
+        {{template "machine-badge" .}}
+      </a>
+      {{else}}<p class="muted">No machines yet. Add one on the <a class="link" href="/machines">Machines</a> page.</p>{{end}}
     </div>
-    <details id="machine-{{.Name}}-programs"><summary>Installed programs ({{len .Installed}})</summary>
-      {{range .Installed}}
-      <div class="op"><strong>{{.Name}}</strong>
-        <div class="grid">
-          <span>Executable</span><code>{{.Executable}}</code>
-          {{if .Args}}<span>Arguments</span><code>{{range $i, $a := .Args}}{{if $i}} {{end}}{{$a}}{{end}}</code>{{end}}
-          {{if .WorkingDirectory}}<span>Working dir</span><code>{{.WorkingDirectory}}</code>{{end}}
-          <span>Window title</span><span>contains “{{.WindowTitleContains}}”</span>
-          {{if .StartupTimeoutMS}}<span>Startup timeout</span><span>{{.StartupTimeoutMS}} ms</span>{{end}}
-        </div>
-      </div>
-      {{else}}<p class="muted">None declared for this machine.</p>{{end}}
-    </details>
-  </div>
-  {{else}}
-  <p class="muted card">No machines yet. Add one above, then paste its token into the local agent on that computer.</p>
-  {{end}}
-  </div>
-</section>
-
-<section>
-  <div class="title"><h2 class="section">Recent jobs</h2>
-    <span class="filters">
-      <select data-filter="project" aria-label="Filter by project"><option value="">All projects</option>
-        {{range .Projects}}<option>{{.Name}}</option>{{end}}</select>
-      <select data-filter="machine" aria-label="Filter by machine"><option value="">All machines</option>
-        {{range .Machines}}<option>{{.Name}}</option>{{end}}</select>
-    </span></div>
-  <div class="card" id="jobs" data-live>
-    {{range .Jobs}}
-    <div class="row job" data-project="{{.Project}}" data-machine="{{.Machine}}">
-      <span><a href="/jobs/{{.ID}}">{{.Project}} / {{.Operation}}</a> <span class="muted">· {{.Machine}}</span></span>
-      <span><span class="s-{{.Status}}">{{.Status}}{{if .ErrorCode}} · {{.ErrorCode}}{{end}}</span>
-        <span class="muted">· {{.Steps}} steps · {{money .CostUSD}} · {{ago .CreatedAt}}</span></span>
-    </div>
-    {{end}}
-    <p class="muted" id="jobs-empty" {{if .Jobs}}hidden{{end}}>No jobs{{if .Jobs}} match these filters{{else}} yet{{end}}.</p>
-  </div>
-</section>
+  </section>
 </div>
-
-<section id="keys">
-  <div class="title"><h2 class="section">API keys</h2>
-    <form class="inline" method="post" action="/dashboard/keys">
-      <input name="name" maxlength="64" placeholder="key name, e.g. production" aria-label="New API key name">
-      <button type="submit">Create API key</button>
-    </form></div>
-  <div class="card">
-  {{range .Keys}}
-    <div class="row"><span><strong>{{.Name}}</strong> <code class="muted">{{.Prefix}}</code></span>
-      <span class="muted">created {{ago .CreatedAt}} · {{if .LastUsedAt}}last used {{ago .LastUsedAt}}{{else}}never used{{end}}
-        <form class="inline" method="post" action="/dashboard/keys/{{.ID}}/revoke" onsubmit="return confirm('Revoke {{.Name}}? Backends using it stop working.')">
-          <button type="submit" class="danger">Revoke</button></form></span>
-    </div>
-  {{else}}
-    <p class="muted">No API keys. Create one for each backend that calls this compute-box; the SDKs read it from <code>SONIC_API_KEY</code>.</p>
-  {{end}}
-  </div>
-</section>
-
-{{if .OwnerSignIn}}
-<section id="account">
-  <h2 class="section">Sign-in password</h2>
-  <div class="card">
-    {{if .PasswordSaved}}<p class="s-succeeded">Password saved. Other browsers were signed out.</p>{{end}}
-    <p class="muted">{{if .HasPassword}}You sign in with this password. Sign-in links still work if you forget it.
-      {{else}}No password yet: you can only sign in with a single-use link. Set one to sign in with a password.{{end}}</p>
-    <form class="stack" method="post" action="/dashboard/password" style="max-width:320px">
-      <input type="text" name="username" value="owner" autocomplete="username" hidden>
-      {{if .HasPassword}}<label>Current password<input type="password" name="current" autocomplete="current-password" required></label>{{end}}
-      <label>New password (at least {{.MinPassword}} characters)<input type="password" name="password" autocomplete="new-password" minlength="{{.MinPassword}}" required></label>
-      <label>Repeat new password<input type="password" name="confirm" autocomplete="new-password" minlength="{{.MinPassword}}" required></label>
-      <button type="submit">{{if .HasPassword}}Change password{{else}}Set password{{end}}</button>
-    </form>
-  </div>
-</section>
-{{end}}
-
-<h2 class="section">Projects</h2>
-{{range .Projects}}
-<div class="card" id="project-{{.Name}}">
-  <div class="title"><strong>{{.Name}}</strong>
-    <span class="muted">{{len .Operations}} operations · {{len .Programs}} programs · {{.Jobs}} jobs · {{money .CostUSD}}{{if .LastJobAt}} · last run {{ago .LastJobAt}}{{end}}</span></div>
-  <details><summary>Programs ({{len .Programs}})</summary>
-    {{range .Programs}}
-    <div class="op"><strong>{{.Name}}</strong> <span class="muted">· {{.Description}}</span>
-      {{if .Instructions}}<div class="text">{{.Instructions}}</div>{{end}}</div>
-    {{else}}<p class="muted">None declared.</p>{{end}}
-  </details>
-  <details><summary>Operations ({{len .Operations}})</summary>
-    <p class="note">Instructions include the project context the SDK adds to every operation.</p>
-    {{range .Operations}}
-    <div class="op"><strong>{{.Name}}</strong> <span class="muted">· {{.Description}}</span>
-      <div class="text">{{or .Instructions "—"}}</div>
-      <details><summary>Input schema</summary><pre>{{pretty .Input}}</pre></details>
-      <details><summary>Output schema</summary><pre>{{pretty .Output}}</pre></details>
-    </div>
-    {{else}}<p class="muted">None synced.</p>{{end}}
-  </details>
-</div>
-{{else}}
-<p class="muted card">No projects yet. A backend creates its project when the SDK syncs at startup.</p>
-{{end}}
-
-<script>
-(() => {
-  // Live regions are re-fetched every few seconds; open sections and filters are kept.
-  const filters = [...document.querySelectorAll("[data-filter]")];
-  function applyFilters() {
-    const want = Object.fromEntries(filters.map(f => [f.dataset.filter, f.value]));
-    const rows = [...document.querySelectorAll("#jobs .job")];
-    let shown = 0;
-    for (const row of rows) {
-      const ok = (!want.project || row.dataset.project === want.project) &&
-                 (!want.machine || row.dataset.machine === want.machine);
-      row.hidden = !ok;
-      if (ok) shown++;
-    }
-    const empty = document.getElementById("jobs-empty");
-    empty.hidden = shown > 0;
-    empty.textContent = rows.length ? "No jobs match these filters." : "No jobs yet.";
-  }
-  async function refresh() {
-    try {
-      const res = await fetch(location.pathname, { cache: "no-store" });
-      if (!res.ok) return;
-      const next = new DOMParser().parseFromString(await res.text(), "text/html");
-      for (const region of document.querySelectorAll("[data-live]")) {
-        const fresh = next.getElementById(region.id);
-        if (!fresh) continue;
-        const open = new Set([...region.querySelectorAll("details[open]")].map(d => d.id));
-        region.innerHTML = fresh.innerHTML;
-        for (const d of region.querySelectorAll("details")) if (open.has(d.id)) d.open = true;
-      }
-      applyFilters();
-    } catch { /* offline for a moment; try again next tick */ }
-  }
-  filters.forEach(f => f.addEventListener("change", applyFilters));
-  applyFilters();
-  setInterval(refresh, 3000);
-})();
-</script>
-{{template "foot"}}
+{{template "live-script"}}
+{{template "foot" .}}
 {{end}}

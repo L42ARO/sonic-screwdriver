@@ -1,0 +1,62 @@
+{{define "machines.html"}}
+{{template "head" .}}
+<div class="head">
+  <div><h1>Machines</h1><p>Windows computers running the local agent. Each one connects with its own token.</p></div>
+  <form class="inline" method="post" action="/dashboard/machines">
+    <input name="name" required pattern="[A-Za-z][A-Za-z0-9_\-]{0,63}" placeholder="machine-name" aria-label="New machine name">
+    <button class="btn primary" type="submit">Add machine</button>
+  </form>
+</div>
+
+<div class="notice" style="margin-bottom:16px">
+  New computer? <a class="link" href="{{.AgentDownload}}">Download the local agent for Windows</a>, unzip it, and paste the
+  machine's token into its Settings with the URL <code>{{.ServerURL}}</code>.
+</div>
+
+<div id="machines" data-live>
+{{range .Machines}}
+<section class="card" id="machine-{{.Name}}">
+  <div class="card-head">
+    <div class="actions"><h2>{{.Name}}</h2>{{template "machine-badge" .}}</div>
+    <div class="actions">
+      <form method="post" action="/dashboard/machines/{{.Name}}/token"{{if .TokenPrefix}} onsubmit="return confirm('Replace the token for {{.Name}}? Its agent disconnects until you paste the new token.')"{{end}}>
+        <button class="btn sm {{if not .TokenPrefix}}accent{{end}}" type="submit">{{if .TokenPrefix}}Regenerate token{{else}}Generate token{{end}}</button></form>
+      <form method="post" action="/dashboard/machines/{{.Name}}/remove" onsubmit="return confirm('Remove {{.Name}}? Its token and installed programs are deleted; job history stays.')">
+        <button class="btn sm danger" type="submit">Remove</button></form>
+    </div>
+  </div>
+  <div class="kv">
+    <span>Now</span>
+    <span>{{with .Current}}<a class="link" href="/jobs/{{.ID}}">{{.Project}} / {{.Operation}}</a> <span class="text-wait">· {{.Steps}} steps</span>{{else}}idle{{end}}</span>
+    <span>Queue</span><span>{{if .Queued}}<span class="text-wait">{{.Queued}} waiting</span>{{else}}empty{{end}}</span>
+    {{if .Screen}}<span>Screen</span><span>{{screen .Screen}}</span>{{end}}
+    <span>Token</span><span>{{if .TokenPrefix}}<code>{{.TokenPrefix}}</code> <span class="meta">· issued {{ago .TokenCreatedAt}}</span>{{else}}<span class="text-wait">none yet: generate one to connect an agent</span>{{end}}</span>
+  </div>
+  <details id="machine-{{.Name}}-programs" style="margin-top:12px"><summary>Installed programs ({{len .Installed}})</summary>
+    <div class="rows">
+    {{range .Installed}}
+      <div class="block">
+        <div class="name">{{.Name}}</div>
+        <div class="kv" style="margin-top:6px">
+          <span>Executable</span><code>{{.Executable}}</code>
+          {{if .Args}}<span>Arguments</span><code>{{range $i, $a := .Args}}{{if $i}} {{end}}{{$a}}{{end}}</code>{{end}}
+          {{if .WorkingDirectory}}<span>Working dir</span><code>{{.WorkingDirectory}}</code>{{end}}
+          <span>Window title</span><span>contains “{{.WindowTitleContains}}”</span>
+          {{if .StartupTimeoutMS}}<span>Startup timeout</span><span>{{.StartupTimeoutMS}} ms</span>{{end}}
+        </div>
+      </div>
+    {{else}}<p class="muted">None declared. Your backend declares them with the SDK (<code>Machine(…, programs=…)</code>).</p>{{end}}
+    </div>
+  </details>
+</section>
+{{else}}
+<section class="card empty">
+  <h2>No machines yet</h2>
+  <p>Add one above, or add the demo project to get <code>{{.Demo.Machine}}</code> with DentaSoft ready to go.</p>
+  <div class="actions"><form method="post" action="/dashboard/demo"><button class="btn accent" type="submit">Add demo project</button></form></div>
+</section>
+{{end}}
+</div>
+{{template "live-script"}}
+{{template "foot" .}}
+{{end}}

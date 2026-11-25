@@ -1,8 +1,8 @@
 package routes_test
 
 import (
-	"net/http/httptest"
 	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/routes"
+	"net/http/httptest"
 	"testing"
 )
 

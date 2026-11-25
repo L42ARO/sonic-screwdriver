@@ -1,0 +1,25 @@
+{{define "keys.html"}}
+{{template "head" .}}
+<div class="head">
+  <div><h1>API keys</h1><p>Your backends call this compute-box with a key. Create one per backend so each can be revoked alone.</p></div>
+  <form class="inline" method="post" action="/dashboard/keys">
+    <input name="name" maxlength="64" placeholder="key name, e.g. production" aria-label="New API key name">
+    <button class="btn primary" type="submit">Create API key</button>
+  </form>
+</div>
+<section class="card">
+  <div class="rows">
+  {{range .Keys}}
+    <div>
+      <span><span class="name">{{.Name}}</span> <code class="meta">{{.Prefix}}</code></span>
+      <span class="actions"><span class="meta">created {{ago .CreatedAt}} · {{if .LastUsedAt}}last used {{ago .LastUsedAt}}{{else}}never used{{end}}</span>
+        <form method="post" action="/dashboard/keys/{{.ID}}/revoke" onsubmit="return confirm('Revoke {{.Name}}? Backends using it stop working.')">
+          <button class="btn sm danger" type="submit">Revoke</button></form></span>
+    </div>
+  {{else}}
+    <div class="empty block"><h2>No API keys</h2><p>Create one above. The SDKs read it from <code>SONIC_API_KEY</code> and send it as <code>Authorization: Bearer …</code>.</p></div>
+  {{end}}
+  </div>
+</section>
+{{template "foot" .}}
+{{end}}

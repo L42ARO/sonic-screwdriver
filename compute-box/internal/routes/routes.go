@@ -58,7 +58,15 @@ func New(d Deps) http.Handler {
 	d.SignIn.Mount(mux, accounts{d.Store})
 	mux.HandleFunc("POST /logout", d.dashboard(d.logout))
 	mux.HandleFunc("GET /{$}", d.dashboard(d.viewerHome))
+	mux.HandleFunc("GET /jobs", d.dashboard(d.viewerJobs))
 	mux.HandleFunc("GET /jobs/{id}", d.dashboard(d.viewerJob))
+	mux.HandleFunc("GET /playground", d.dashboard(d.playground))
+	mux.HandleFunc("GET /projects", d.dashboard(d.viewerProjects))
+	mux.HandleFunc("GET /projects/{name}", d.dashboard(d.viewerProject))
+	mux.HandleFunc("GET /machines", d.dashboard(d.viewerMachines))
+	mux.HandleFunc("GET /keys", d.dashboard(d.viewerKeys))
+	mux.HandleFunc("POST /dashboard/demo", d.dashboard(d.installDemo))
+	mux.HandleFunc("POST /dashboard/playground/run", d.dashboard(d.playgroundRun))
 	mux.HandleFunc("GET /screens/{job}/{file}", d.dashboard(d.screenshot))
 	mux.HandleFunc("POST /dashboard/machines", d.dashboard(d.addMachine))
 	mux.HandleFunc("POST /dashboard/machines/{machine}/token", d.dashboard(d.regenerateMachineToken))
@@ -66,6 +74,7 @@ func New(d Deps) http.Handler {
 	mux.HandleFunc("POST /dashboard/keys", d.dashboard(d.createAPIKey))
 	mux.HandleFunc("POST /dashboard/keys/{id}/revoke", d.dashboard(d.revokeAPIKey))
 	if d.ownerSignIn() {
+		mux.HandleFunc("GET /settings", d.dashboard(d.viewerSettings))
 		mux.HandleFunc("POST /dashboard/password", d.dashboard(d.setPassword))
 	}
 

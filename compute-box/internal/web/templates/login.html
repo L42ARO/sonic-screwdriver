@@ -1,32 +1,45 @@
-{{define "login.html"}}
-{{template "head" "Sign in"}}
-<section class="card narrow">
+{{define "login.html"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · sonic-screwdriver</title>
+{{template "styles"}}
+<style>
+  body { min-height:100vh; display:grid; place-items:center; padding:24px 16px; }
+  .login { width:100%; max-width:380px; }
+  .login .brand { padding:0 0 28px; }
+</style>
+</head>
+<body>
+<div class="login">
+  <div class="brand"><span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l8-8"/><path d="M14 4l6 6-4 4-6-6z"/></svg></span><span>sonic-screwdriver</span></div>
   <h1>Sign in</h1>
-  {{if .LinkFailed}}<p class="s-failed">This sign-in link is invalid, expired or already used.</p>{{end}}
-  {{if .PasswordFailed}}<p class="s-failed">Wrong password.</p>{{end}}
-  {{if .Wait}}<p class="s-failed">Too many wrong passwords. Try again in about {{.Wait}}, or use a sign-in link.</p>{{end}}
+  <p class="muted" style="margin-top:6px">Owner of this compute-box.</p>
+  {{if .LinkFailed}}<p class="notice bad">This sign-in link is invalid, expired or already used.</p>{{end}}
+  {{if .PasswordFailed}}<p class="notice bad">Wrong password.</p>{{end}}
+  {{if .Wait}}<p class="notice bad">Too many wrong passwords. Try again in about {{.Wait}}, or use a sign-in link.</p>{{end}}
   {{if .Token}}
-    <p>Continue to the dashboard as the owner of this compute-box.</p>
-    <form method="post" action="/login">
+    <form method="post" action="/login" style="margin-top:24px">
       <input type="hidden" name="token" value="{{.Token}}">
-      <button class="primary" type="submit">Sign in</button>
+      <button class="btn primary" type="submit" style="width:100%;height:42px">Continue to the dashboard</button>
     </form>
   {{else if .HasPassword}}
-    <form class="stack" method="post" action="/login">
+    <form class="stack" method="post" action="/login" style="margin-top:24px;max-width:none">
       <input type="text" name="username" value="owner" autocomplete="username" hidden>
-      <label>Password<input type="password" name="password" autocomplete="current-password" required autofocus></label>
-      <button class="primary" type="submit">Sign in</button>
+      <label class="field">Password<input type="password" name="password" autocomplete="current-password" required autofocus></label>
+      <button class="btn primary" type="submit" style="width:100%;height:42px;align-self:stretch">Sign in</button>
     </form>
-    <p class="note">Forgot it? Sign in with a link (below) and set a new one.</p>
   {{else}}
-    <p>No password is set yet. Set <code>SONIC_OWNER_PASSWORD</code> in the server's
-       <code>.env</code> and restart it, or sign in once with a link (below) and set a
-       password in the dashboard.</p>
+    <p class="notice" style="margin-top:24px">No password is set yet. Set <code>SONIC_OWNER_PASSWORD</code> in the server's
+       <code>.env</code> and restart it, or sign in once with a link (below) and set a password in Settings.</p>
   {{end}}
   {{if not .Token}}
-    <p class="note">One-time sign-in link (works once, for 24 hours): on the server run <code>compute-box login-link</code>,
-       or with Docker <code>docker compose exec compute-box /app/compute-box login-link</code>.</p>
+    <p class="meta" style="margin-top:24px;line-height:1.7">Forgot it? A one-time sign-in link (works once, for 24 hours):
+      on the server run <code>compute-box login-link</code>, or with Docker
+      <code>docker compose exec compute-box /app/compute-box login-link</code>.</p>
   {{end}}
-</section>
-{{template "foot"}}
+</div>
+</body>
+</html>
 {{end}}

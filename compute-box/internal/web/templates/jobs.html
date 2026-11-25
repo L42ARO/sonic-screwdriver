@@ -1,0 +1,23 @@
+{{define "jobs.html"}}
+{{template "head" .}}
+<div class="head">
+  <div><h1>Jobs</h1><p>Every operation run, newest first. Open one to see each step and screenshot.</p></div>
+  <div class="actions">
+    <select data-filter="project" aria-label="Filter by project"><option value="">All projects</option>
+      {{range .Projects}}<option {{if eq .Name $.Filter.project}}selected{{end}}>{{.Name}}</option>{{end}}</select>
+    <select data-filter="machine" aria-label="Filter by machine"><option value="">All machines</option>
+      {{range .Machines}}<option {{if eq .Name $.Filter.machine}}selected{{end}}>{{.Name}}</option>{{end}}</select>
+    <select data-filter="status" aria-label="Filter by status"><option value="">Any status</option>
+      {{range .Statuses}}<option {{if eq . $.Filter.status}}selected{{end}}>{{.}}</option>{{end}}</select>
+  </div>
+</div>
+<section class="card">
+  <div class="rows" id="jobs" data-live>
+    {{template "job-rows" .Jobs}}
+    {{if not .Jobs}}<p class="muted">No jobs yet. Run one from the <a class="link" href="/playground">Playground</a>.</p>{{end}}
+  </div>
+  <p class="muted" id="jobs-none" hidden>No jobs match these filters.</p>
+</section>
+{{template "live-script"}}
+{{template "foot" .}}
+{{end}}

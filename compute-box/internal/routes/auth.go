@@ -232,7 +232,7 @@ type loginThrottle struct {
 }
 
 type loginFailures struct {
-	count       int
+	count        int
 	first, until time.Time
 }
 
@@ -300,17 +300,17 @@ func (d Deps) setPassword(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !ok {
-			d.showError(w, "The current password is wrong. Forgot it? Sign in with a link (compute-box login-link) and set a new one.")
+			d.showError(w, r, "settings", "/settings", "The current password is wrong. Forgot it? Sign in with a link (compute-box login-link) and set a new one.")
 			return
 		}
 	}
 	password := r.FormValue("password")
 	if password != r.FormValue("confirm") {
-		d.showError(w, "The two new passwords don't match.")
+		d.showError(w, r, "settings", "/settings", "The two new passwords don't match.")
 		return
 	}
 	if len(password) < store.MinPasswordLength {
-		d.showError(w, fmt.Sprintf("Passwords are at least %d characters.", store.MinPasswordLength))
+		d.showError(w, r, "settings", "/settings", fmt.Sprintf("Passwords are at least %d characters.", store.MinPasswordLength))
 		return
 	}
 	var session string
@@ -321,5 +321,5 @@ func (d Deps) setPassword(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/?password=saved#account", http.StatusSeeOther)
+	http.Redirect(w, r, "/settings?password=saved", http.StatusSeeOther)
 }

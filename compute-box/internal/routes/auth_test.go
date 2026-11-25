@@ -96,7 +96,9 @@ func TestUsersAreIsolated(t *testing.T) {
 	if events[len(events)-1][0] != "succeeded" {
 		t.Fatalf("alice's job: %v", events)
 	}
-	var queued struct{ JobID string `json:"job_id"` }
+	var queued struct {
+		JobID string `json:"job_id"`
+	}
 	json.Unmarshal([]byte(events[0][1]), &queued)
 	jobID := queued.JobID
 
@@ -117,19 +119,22 @@ func TestUsersAreIsolated(t *testing.T) {
 	// Lists, usage and the dashboard are per user.
 	expect(t, do(t, "GET", u+"/v1/machines", "", as(alice)), 200, `"online":true`)
 	expect(t, do(t, "GET", u+"/v1/machines", "", as(bob)), 200, `"online":false`)
-	dashboard := body(t, do(t, "GET", u+"/", "", as(bob)))
-	for _, leaked := range []string{"secret alice instructions", "alice program", `C:\Alice`, jobID} {
-		if strings.Contains(dashboard, leaked) {
-			t.Fatalf("bob's dashboard shows alice's %q", leaked)
+	for _, path := range []string{"/", "/projects", "/projects/clinic", "/machines", "/jobs", "/playground", "/keys"} {
+		page := body(t, do(t, "GET", u+path, "", as(bob)))
+		for _, leaked := range []string{"secret alice instructions", "alice program", `C:\Alice`, jobID} {
+			if strings.Contains(page, leaked) {
+				t.Fatalf("bob's %s shows alice's %q", path, leaked)
+			}
 		}
 	}
-	if !strings.Contains(body(t, do(t, "GET", u+"/", "", as(alice))), "secret alice instructions") {
-		t.Fatal("alice's dashboard is missing her own project")
-	}
+	expect(t, do(t, "GET", u+"/projects/clinic", "", as(bob)), 404, "") // bob has no project of that name
+	expect(t, do(t, "GET", u+"/projects/clinic", "", as(alice)), 200, "secret alice instructions")
+	expect(t, do(t, "GET", u+"/machines", "", as(alice)), 200, `C:\Alice`)
+	expect(t, do(t, "GET", u+"/jobs", "", as(alice)), 200, jobID)
 
 	// Bob can't manage alice's machine; removing "his" machine of that name leaves hers alone.
 	form := map[string]string{"Cookie": bob.cookie, "Origin": u, "Content-Type": "application/x-www-form-urlencoded"}
-	expect(t, do(t, "POST", u+"/dashboard/machines/dentist-front-desk/remove", "", form), 200, "")  // 303 to the dashboard, followed
+	expect(t, do(t, "POST", u+"/dashboard/machines/dentist-front-desk/remove", "", form), 200, "") // 303 to the dashboard, followed
 	if !box.hub.Online(hub.Machine{User: aliceID, Name: "dentist-front-desk"}) {
 		t.Fatal("bob's remove disconnected alice's machine")
 	}
@@ -302,7 +307,7 @@ func TestPasswordSignIn(t *testing.T) {
 	expect(t, post("/dashboard/password", url.Values{"password": {"short"}, "confirm": {"short"}}, owner.cookie), 400, "at least")
 	expect(t, post("/dashboard/password", url.Values{"password": {"correct horse"}, "confirm": {"correct horsf"}}, owner.cookie), 400, "match")
 	expect(t, post("/dashboard/password", url.Values{"password": {"correct horse"}, "confirm": {"correct horse"}}, owner.cookie), 303, "")
-	expect(t, do(t, "GET", u+"/", "", map[string]string{"Cookie": owner.cookie}), 200, "Change password")
+	expect(t, do(t, "GET", u+"/settings", "", map[string]string{"Cookie": owner.cookie}), 200, "Change password")
 	if _, ok, _ := box.db.UserBySession(context.Background(), other); ok {
 		t.Fatal("setting the password left other browsers signed in")
 	}

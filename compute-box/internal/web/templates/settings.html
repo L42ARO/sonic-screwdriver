@@ -1,0 +1,18 @@
+{{define "settings.html"}}
+{{template "head" .}}
+<div class="head"><div><h1>Settings</h1><p>How you sign in to this compute-box.</p></div></div>
+<section class="card" id="account">
+  <div class="card-head"><h2>Sign-in password</h2></div>
+  {{if .PasswordSaved}}<p class="notice ok" style="margin-bottom:14px">Password saved. Other browsers were signed out.</p>{{end}}
+  <p class="muted" style="margin-bottom:16px">{{if .HasPassword}}You sign in with this password. A sign-in link from <code>compute-box login-link</code> still works if you forget it.
+    {{else}}No password yet: you can only sign in with a single-use link. Set one to sign in with a password.{{end}}</p>
+  <form class="stack" method="post" action="/dashboard/password">
+    <input type="text" name="username" value="owner" autocomplete="username" hidden>
+    {{if .HasPassword}}<label class="field">Current password<input type="password" name="current" autocomplete="current-password" required></label>{{end}}
+    <label class="field">New password (at least {{.MinPassword}} characters)<input type="password" name="password" autocomplete="new-password" minlength="{{.MinPassword}}" required></label>
+    <label class="field">Repeat new password<input type="password" name="confirm" autocomplete="new-password" minlength="{{.MinPassword}}" required></label>
+    <button class="btn primary" type="submit">{{if .HasPassword}}Change password{{else}}Set password{{end}}</button>
+  </form>
+</section>
+{{template "foot" .}}
+{{end}}

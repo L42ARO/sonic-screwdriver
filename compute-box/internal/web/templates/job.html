@@ -1,31 +1,39 @@
 {{define "job.html"}}
-{{template "head" .Job.Operation}}
-{{if not .Job.Done}}<meta http-equiv="refresh" content="3">{{end}}
-<p><a href="/">← dashboard</a></p>
-<header>
-  <h1>{{.Job.Project}} / {{.Job.Operation}}</h1>
-  <span class="s-{{.Job.Status}}">{{.Job.Status}}{{if .Job.ErrorCode}} · {{.Job.ErrorCode}}{{end}}</span>
-</header>
+{{template "head" .}}
+<div class="crumbs"><a href="/jobs">Jobs</a> / <span class="mono">{{.Job.ID}}</span></div>
+<div class="head">
+  <div><h1 class="mono">{{.Job.Operation}}</h1><p><a class="link" href="/projects/{{.Job.Project}}">{{.Job.Project}}</a> · {{.Job.Machine}} · {{ago .Job.CreatedAt}}</p></div>
+  <div class="actions" id="job-status" data-live><span class="badge s-{{.Job.Status}}">{{.Job.Status}}{{if .Job.ErrorCode}} · {{.Job.ErrorCode}}{{end}}</span></div>
+</div>
 
-<section class="card">
-  <div class="row"><span class="muted">job</span><code>{{.Job.ID}}</code></div>
-  <div class="row"><span class="muted">machine</span><span>{{.Job.Machine}}</span></div>
-  <div class="row"><span class="muted">model</span><span>{{or .Job.Model "-"}}</span></div>
-  <div class="row"><span class="muted">cost</span><span>{{money .Job.CostUSD}}</span></div>
-  <div class="row"><span class="muted">input</span><code>{{printf "%s" .Job.Input}}</code></div>
-  {{if .Job.Output}}<div class="row"><span class="muted">output</span><code>{{printf "%s" .Job.Output}}</code></div>{{end}}
-  {{if .Job.ErrorMessage}}<div class="row"><span class="muted">error</span><span>{{.Job.ErrorMessage}}{{if .Job.OutcomeUnknown}} (outcome unknown){{end}}</span></div>{{end}}
-</section>
+<div class="grid-2" style="grid-template-columns:minmax(0,2fr) minmax(0,3fr)">
+  <section class="card" id="job-summary" data-live>
+    <div class="kv">
+      <span>Model</span><span>{{or .Job.Model "—"}}</span>
+      <span>Steps</span><span>{{.Job.Steps}}</span>
+      <span>Cost</span><span>{{money .Job.CostUSD}}</span>
+      {{if .Job.StartedAt}}<span>Started</span><span>{{ago .Job.StartedAt}}</span>{{end}}
+      {{if .Job.FinishedAt}}<span>Finished</span><span>{{ago .Job.FinishedAt}}</span>{{end}}
+    </div>
+    <h3>Input</h3><pre class="codebox">{{pretty .Job.Input}}</pre>
+    {{if .Job.Output}}<h3>Output</h3><pre class="codebox">{{pretty .Job.Output}}</pre>{{end}}
+    {{if .Job.ErrorMessage}}<h3>Error</h3><p class="notice bad">{{.Job.ErrorMessage}}{{if .Job.OutcomeUnknown}} (outcome unknown){{end}}</p>{{end}}
+    {{if eq .Job.Status "queued"}}<p class="notice warn">Queued: {{.Job.Machine}} runs one job at a time and will start this one next.</p>{{end}}
+  </section>
 
-<section class="card steps">
-  <h2>Steps</h2>
-  {{range .Steps}}
-  <div class="step">
-    <strong>{{.N}}.</strong> {{.Description}}{{if not .OK}} <span class="s-failed">· failed: {{.Error}}</span>{{end}}
-    {{if .Note}}<pre class="muted">{{.Note}}</pre>{{end}}
-    {{if .Screenshot}}<a href="/screens/{{$.Job.ID}}/{{.Screenshot}}"><img loading="lazy" src="/screens/{{$.Job.ID}}/{{.Screenshot}}" alt="screen after step {{.N}}"></a>{{end}}
-  </div>
-  {{else}}<p class="muted">No steps yet.</p>{{end}}
-</section>
-{{template "foot"}}
+  <section class="card">
+    <div class="card-head"><h2>Steps</h2>{{if not .Job.Done}}<span class="meta">Updates live</span>{{end}}</div>
+    <div class="timeline" id="job-steps" data-live>
+    {{range .Steps}}
+      <div class="item">
+        <span class="dim mono">{{.N}}.</span> {{.Description}}{{if not .OK}} <span class="text-bad">· failed: {{.Error}}</span>{{end}}
+        {{if .Note}}<pre class="meta" style="margin-top:6px">{{.Note}}</pre>{{end}}
+        {{if .Screenshot}}<a href="/screens/{{$.Job.ID}}/{{.Screenshot}}" target="_blank" rel="noopener"><img loading="lazy" src="/screens/{{$.Job.ID}}/{{.Screenshot}}" alt="Screen after step {{.N}}"></a>{{end}}
+      </div>
+    {{else}}<p class="muted">No steps yet.</p>{{end}}
+    </div>
+  </section>
+</div>
+{{if not .Job.Done}}{{template "live-script"}}{{end}}
+{{template "foot" .}}
 {{end}}

@@ -1,0 +1,80 @@
+{{define "projects.html"}}
+{{template "head" .}}
+<div class="head">
+  <div><h1>Projects</h1><p>Each project is one app's operations, declared by its backend with the SDK.</p></div>
+  {{if not .HasDemo}}<form method="post" action="/dashboard/demo"><button class="btn" type="submit">Add demo project</button></form>{{end}}
+</div>
+{{if .Projects}}
+<div class="grid-3">
+  {{range .Projects}}
+  <a class="card card-link" href="/projects/{{.Name}}">
+    <div class="name" style="font-size:15px">{{.Name}}</div>
+    <p class="meta" style="margin-top:4px">{{.Operations}} operations · {{.Programs}} programs</p>
+    <div class="kv" style="margin-top:14px;font-size:13px">
+      <span>Jobs</span><span>{{.Jobs}}</span>
+      <span>Spend</span><span>{{money .CostUSD}}</span>
+      <span>Last run</span><span>{{if .LastJobAt}}{{ago .LastJobAt}}{{else}}never{{end}}</span>
+    </div>
+  </a>
+  {{end}}
+</div>
+{{else}}
+<section class="card empty">
+  <h2>No projects yet</h2>
+  <p>A backend creates its project when the SDK syncs at startup. Or start with the demo.</p>
+  <div class="actions"><form method="post" action="/dashboard/demo"><button class="btn accent" type="submit">Add demo project</button></form></div>
+</section>
+{{end}}
+{{template "foot" .}}
+{{end}}
+
+{{define "project.html"}}
+{{template "head" .}}
+<div class="crumbs"><a href="/projects">Projects</a> / {{.Project.Name}}</div>
+<div class="head">
+  <div><h1>{{.Project.Name}}</h1>
+    <p>{{len .Operations}} operations · {{len .Programs}} programs · {{.Project.Jobs}} jobs · {{money .Project.CostUSD}}{{if .Project.LastJobAt}} · last run {{ago .Project.LastJobAt}}{{end}}</p></div>
+  <div class="actions">
+    {{if .IsDemo}}<form method="post" action="/dashboard/demo" onsubmit="return confirm('Reset the demo project and {{.DemoMachine}} to their original setup?')"><button class="btn" type="submit">Reset demo</button></form>{{end}}
+    <a class="btn primary" href="/playground?project={{.Project.Name}}">{{template "icon" "playground"}}Try in Playground</a>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>Operations</h2><span class="meta">Instructions include the project context the SDK adds to each one.</span></div>
+  <div class="rows">
+  {{range .Operations}}
+    <div class="block" id="op-{{.Name}}">
+      <div class="actions" style="justify-content:space-between">
+        <span><span class="name mono">{{.Name}}</span> <span class="meta">· {{.Description}}</span></span>
+        <a class="btn sm" href="/playground?project={{$.Project.Name}}&operation={{.Name}}">Run</a>
+      </div>
+      <details id="op-{{.Name}}-instructions"><summary>Instructions</summary><pre class="codebox" style="white-space:pre-wrap">{{or .Instructions "—"}}</pre></details>
+      <details id="op-{{.Name}}-input"><summary>Input schema</summary><pre class="codebox">{{pretty .Input}}</pre></details>
+      <details id="op-{{.Name}}-output"><summary>Output schema</summary><pre class="codebox">{{pretty .Output}}</pre></details>
+    </div>
+  {{else}}<p class="muted">None synced.</p>{{end}}
+  </div>
+</section>
+
+<div class="grid-2 section">
+  <section class="card">
+    <div class="card-head"><h2>Programs</h2></div>
+    <div class="rows">
+    {{range .Programs}}
+      <div class="block"><span class="name">{{.Name}}</span> <span class="meta">· {{.Description}}</span>
+        {{if .Instructions}}<p class="meta" style="margin-top:4px;white-space:pre-wrap">{{.Instructions}}</p>{{end}}</div>
+    {{else}}<p class="muted">None declared.</p>{{end}}
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Recent jobs</h2><a class="meta link" href="/jobs?project={{.Project.Name}}">View all</a></div>
+    <div class="rows" id="project-jobs" data-live>
+      {{template "job-rows" .Jobs}}
+      {{if not .Jobs}}<p class="muted">No jobs yet.</p>{{end}}
+    </div>
+  </section>
+</div>
+{{template "live-script"}}
+{{template "foot" .}}
+{{end}}

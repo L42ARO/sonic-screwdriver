@@ -1,0 +1,140 @@
+{{define "playground.html"}}
+{{template "head" .}}
+<div class="head">
+  <div><h1>Playground</h1><p>Run any operation on one of your machines and watch it work, then copy the code.</p></div>
+  {{if and .Project .IsDemo}}<form method="post" action="/dashboard/demo" onsubmit="return confirm('Reset the demo project and {{.Demo.Machine}} to their original setup?')"><button class="btn sm" type="submit">Reset demo</button></form>{{end}}
+</div>
+
+{{if not .Projects}}
+<section class="card empty">
+  <h2>Nothing to run yet</h2>
+  <p>Add the demo project to try DentaSoft, or sync your own project from a backend with the SDK.</p>
+  <div class="actions"><form method="post" action="/dashboard/demo"><button class="btn accent" type="submit">Add demo project</button></form></div>
+</section>
+{{else}}
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Request</h2></div>
+    <div class="grid-2" style="gap:12px">
+      <label class="field">Project
+        <select id="pick-project" aria-label="Project">{{range .Projects}}<option {{if eq .Name $.Project.Name}}selected{{end}}>{{.Name}}</option>{{end}}</select></label>
+      <label class="field">Operation
+        <select id="pick-operation" aria-label="Operation">{{range .Operations}}<option {{if eq .Name $.Operation.Name}}selected{{end}}>{{.Name}}</option>{{end}}</select></label>
+    </div>
+    {{if .Operation}}
+    <form method="post" action="/dashboard/playground/run" id="run" style="margin-top:14px;display:flex;flex-direction:column;gap:14px">
+      <input type="hidden" name="project" value="{{.Project.Name}}">
+      <input type="hidden" name="operation" value="{{.Operation.Name}}">
+      <label class="field">Machine
+        <select name="machine" id="pick-machine" required>
+          {{if not .Machines}}<option value="">No machines yet</option>{{end}}
+          {{range .Machines}}<option value="{{.Name}}" data-online="{{if .Online}}yes{{else}}no{{end}}" {{if eq .Name $.Machine}}selected{{end}}>{{.Name}} · {{if .Online}}online{{else}}offline{{end}}</option>{{end}}
+        </select></label>
+      <p class="notice warn" id="offline-note" hidden>This machine's agent isn't connected, so it can't take jobs. Start the local agent on that computer (<a class="link" href="/machines">Machines</a>).</p>
+      <label class="field">Input (JSON)
+        <textarea name="input" id="input" rows="8" spellcheck="false">{{.Input}}</textarea></label>
+      {{if .Error}}<p class="notice bad" role="alert">{{.Error}}</p>{{end}}
+      <div class="actions"><button class="btn primary" type="submit" {{if not .Machines}}disabled{{end}}>{{template "icon" "playground"}}Run</button>
+        <span class="meta">Opens the job and follows it live.</span></div>
+    </form>
+    {{else}}<p class="muted" style="margin-top:14px">This project has no operations yet.</p>{{end}}
+  </section>
+
+  {{if .Operation}}
+  <div>
+    <section class="card">
+      <div class="card-head"><h2 class="mono">{{.Operation.Name}}</h2><a class="meta link" href="/projects/{{.Project.Name}}#op-{{.Operation.Name}}">In project</a></div>
+      <p>{{.Operation.Description}}</p>
+      <details id="pg-instructions"><summary>Instructions the agent follows</summary><pre class="codebox" style="white-space:pre-wrap">{{or .Operation.Instructions "—"}}</pre></details>
+      <details id="pg-input"><summary>Input schema</summary><pre class="codebox">{{pretty .Operation.Input}}</pre></details>
+      <details id="pg-output"><summary>Output schema</summary><pre class="codebox">{{pretty .Operation.Output}}</pre></details>
+    </section>
+    <section class="card">
+      <div class="card-head">
+        <div class="tabs" role="tablist">
+          <button class="tab on" type="button" data-tab="python" role="tab">Python</button>
+          <button class="tab" type="button" data-tab="curl" role="tab">curl</button>
+        </div>
+        <button class="btn sm" type="button" id="copy">Copy</button>
+      </div>
+      <div class="codebox"><pre id="code"></pre></div>
+      <p class="meta" style="margin-top:10px">Needs an <a class="link" href="/keys">API key</a> in <code>SONIC_API_KEY</code>.
+        SDKs: <a class="link" href="https://github.com/L42ARO/sonic-screwdriver/tree/main/sdk">Python, TypeScript and Go</a>.</p>
+    </section>
+  </div>
+  {{end}}
+</div>
+
+<script>
+(() => {
+  const project = document.getElementById("pick-project");
+  const operation = document.getElementById("pick-operation");
+  project.addEventListener("change", () => location = "/playground?project=" + encodeURIComponent(project.value));
+  operation?.addEventListener("change", () => location = "/playground?project=" + encodeURIComponent(project.value) + "&operation=" + encodeURIComponent(operation.value));
+
+  const machine = document.getElementById("pick-machine");
+  const offline = document.getElementById("offline-note");
+  function showOffline() {
+    const o = machine?.selectedOptions[0];
+    if (offline) offline.hidden = !o || !o.value || o.dataset.online === "yes";
+  }
+  machine?.addEventListener("change", () => { showOffline(); render(); });
+  showOffline();
+
+  const code = document.getElementById("code");
+  if (!code) return;
+  const server = {{.ServerURL}}, hosted = {{.HostedURL}};
+  const input = document.getElementById("input");
+  let tab = "python";
+  function py(v, indent = "") {
+    if (v === null) return "None";
+    if (v === true) return "True";
+    if (v === false) return "False";
+    if (Array.isArray(v)) return "[" + v.map(x => py(x, indent)).join(", ") + "]";
+    if (typeof v === "object") return "{" + Object.entries(v).map(([k, x]) => JSON.stringify(k) + ": " + py(x, indent)).join(", ") + "}";
+    return JSON.stringify(v);
+  }
+  function render() {
+    let value;
+    try { value = JSON.parse(input.value || "{}"); } catch { value = null; }
+    const m = machine?.value || "your-machine";
+    const p = project.value, op = operation.value;
+    if (tab === "python") {
+      const url = server === hosted ? "" : `, url=${JSON.stringify(server)}`;
+      code.textContent = value === null ? "# Fix the input JSON to see the code." :
+`import asyncio
+from sonic_screwdriver import Sonic
+
+# Reads SONIC_API_KEY from the environment.
+sonic = Sonic(project=${JSON.stringify(p)}, machine=${JSON.stringify(m)}${url})
+
+async def main():
+    output, job_id = await sonic.run_job(${JSON.stringify(op)}, ${py(value)})
+    print(output)
+
+asyncio.run(main())`;
+    } else {
+      const body = JSON.stringify({ machine: m, input: value ?? {} }).replace(/'/g, "'\\''");
+      code.textContent = value === null ? "# Fix the input JSON to see the code." :
+`curl -N -X POST "${server}/v1/projects/${encodeURIComponent(p)}/operations/${encodeURIComponent(op)}/jobs" \\
+  -H "Authorization: Bearer $SONIC_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -H "Accept: text/event-stream" \\
+  -d '${body}'`;
+    }
+  }
+  document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => {
+    tab = b.dataset.tab;
+    document.querySelectorAll("[data-tab]").forEach(x => x.classList.toggle("on", x === b));
+    render();
+  }));
+  document.getElementById("copy").addEventListener("click", e => {
+    navigator.clipboard.writeText(code.textContent).then(() => { e.target.textContent = "Copied"; setTimeout(() => e.target.textContent = "Copy", 1500); });
+  });
+  input.addEventListener("input", render);
+  render();
+})();
+</script>
+{{end}}
+{{template "foot" .}}
+{{end}}

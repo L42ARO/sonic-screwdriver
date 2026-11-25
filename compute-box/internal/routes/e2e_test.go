@@ -153,7 +153,7 @@ var bearer string
 // testOwner is a user with an API key, a machine token for dentist-front-desk and a
 // signed-in dashboard session.
 type testOwner struct {
-	id                         int64
+	id                           int64
 	apiKey, machineToken, cookie string
 }
 

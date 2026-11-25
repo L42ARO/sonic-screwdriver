@@ -1,0 +1,206 @@
+{
+  "project": "demo-project",
+  "machine": "demo-machine",
+  "machine_programs": {
+    "dentasoft": {
+      "executable": "%SONIC_AGENT_DIR%\\demo\\DentaSoft.exe",
+      "window_title_contains": "DentaSoft",
+      "args": [],
+      "working_directory": "",
+      "startup_timeout_ms": 30000
+    }
+  },
+  "project_programs": {
+    "dentasoft": {
+      "description": "Patient records, appointments and balances.",
+      "instructions": ""
+    }
+  },
+  "operations": [
+    {
+      "name": "lookup_patient",
+      "description": "Look up a patient's record by patient ID.",
+      "instructions": "Use DentaSoft Patient Manager; open the dentasoft program if needed. If its login box is showing, log in with user name drsmith and password molar123. DentaSoft is slow: after each action wait for 'Please wait...' to clear. Its text boxes only support typing and Backspace: shortcuts like Ctrl+A, Home or Delete do nothing.\n\nType the patient ID into the Patient ID box in the Find Patient panel and press Find.\nClick the matching row under Results, then read the fields in the Patient Record panel,\nzooming in if any text is hard to read. If DentaSoft says no records were found,\nreturn found=false and leave the other fields empty.",
+      "input": {
+        "properties": {
+          "patient_id": {
+            "description": "DentaSoft patient ID, e.g. P-1004",
+            "pattern": "^P-\\d{4}$",
+            "title": "Patient Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "patient_id"
+        ],
+        "title": "lookup_patient_input",
+        "type": "object"
+      },
+      "output": {
+        "properties": {
+          "found": {
+            "title": "Found",
+            "type": "boolean"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Name"
+          },
+          "date_of_birth": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "MM/DD/YYYY as shown",
+            "title": "Date Of Birth"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Phone"
+          },
+          "insurance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Insurance"
+          },
+          "balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Balance Due in dollars",
+            "title": "Balance"
+          },
+          "next_appointment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "MM/DD/YYYY, empty if none",
+            "title": "Next Appointment"
+          },
+          "allergies": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Allergies"
+          }
+        },
+        "required": [
+          "found"
+        ],
+        "title": "Patient",
+        "type": "object"
+      }
+    },
+    {
+      "name": "update_balance",
+      "description": "Set a patient's Balance Due.",
+      "instructions": "Use DentaSoft Patient Manager; open the dentasoft program if needed. If its login box is showing, log in with user name drsmith and password molar123. DentaSoft is slow: after each action wait for 'Please wait...' to clear. Its text boxes only support typing and Backspace: shortcuts like Ctrl+A, Home or Delete do nothing.\n\nFind the patient by Patient ID and open their record. Note the current Balance Due.\nClick Edit, clear the Balance Due field, type the new amount with two decimals, click\nSave, answer Yes to the confirmation and OK to the success message. Then re-read\nBalance Due and only report success if it shows the new amount. If the patient does\nnot exist, fail with code not_found.",
+      "input": {
+        "properties": {
+          "patient_id": {
+            "description": "DentaSoft patient ID, e.g. P-1004",
+            "pattern": "^P-\\d{4}$",
+            "title": "Patient Id",
+            "type": "string"
+          },
+          "balance": {
+            "minimum": 0,
+            "title": "Balance",
+            "type": "number"
+          }
+        },
+        "required": [
+          "patient_id",
+          "balance"
+        ],
+        "title": "update_balance_input",
+        "type": "object"
+      },
+      "output": {
+        "properties": {
+          "previous_balance": {
+            "title": "Previous Balance",
+            "type": "number"
+          },
+          "new_balance": {
+            "title": "New Balance",
+            "type": "number"
+          }
+        },
+        "required": [
+          "previous_balance",
+          "new_balance"
+        ],
+        "title": "BalanceChange",
+        "type": "object"
+      }
+    }
+  ],
+  "examples": {
+    "lookup_patient": {
+      "patient_id": "P-1004"
+    },
+    "update_balance": {
+      "patient_id": "P-1004",
+      "balance": 120.5
+    }
+  }
+}

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/services/hub"
-	"github.com/L42ARO/sonic-screwdriver/compute-box/internal/web"
 )
 
 // Machines and API keys are the only things managed from the dashboard; projects,
@@ -18,7 +17,7 @@ import (
 func (d Deps) addMachine(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(r.FormValue("name"))
 	if !nameRE.MatchString(name) {
-		d.showError(w, "Machine names start with a letter and use at most 64 letters, digits, underscores or hyphens.")
+		d.showError(w, r, "machines", "/machines", "Machine names start with a letter and use at most 64 letters, digits, underscores or hyphens.")
 		return
 	}
 	d.issueMachineToken(w, r, name, false)
@@ -44,7 +43,7 @@ func (d Deps) issueMachineToken(w http.ResponseWriter, r *http.Request, name str
 	if replaced {
 		d.Hub.Disconnect(hub.Machine{User: user, Name: name})
 	}
-	d.showSecret(w, map[string]any{"Kind": "machine", "Name": name, "Secret": token, "Replaced": replaced})
+	d.showSecret(w, r, "machines", "/machines", map[string]any{"Kind": "machine", "Name": name, "Secret": token, "Replaced": replaced})
 }
 
 // removeMachine deletes a machine, its programs and its token. Its job history stays.
@@ -55,7 +54,7 @@ func (d Deps) removeMachine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	d.Hub.Disconnect(hub.Machine{User: user, Name: name})
-	http.Redirect(w, r, "/#machines", http.StatusSeeOther)
+	http.Redirect(w, r, "/machines", http.StatusSeeOther)
 }
 
 func (d Deps) createAPIKey(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +63,7 @@ func (d Deps) createAPIKey(w http.ResponseWriter, r *http.Request) {
 		name = "API key"
 	}
 	if len(name) > 64 {
-		d.showError(w, "Key names are at most 64 characters.")
+		d.showError(w, r, "keys", "/keys", "Key names are at most 64 characters.")
 		return
 	}
 	key, err := d.Store.CreateAPIKey(r.Context(), userOf(r), name)
@@ -72,7 +71,7 @@ func (d Deps) createAPIKey(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	d.showSecret(w, map[string]any{"Kind": "key", "Name": name, "Secret": key})
+	d.showSecret(w, r, "keys", "/keys", map[string]any{"Kind": "key", "Name": name, "Secret": key})
 }
 
 func (d Deps) revokeAPIKey(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +84,7 @@ func (d Deps) revokeAPIKey(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/#keys", http.StatusSeeOther)
+	http.Redirect(w, r, "/keys", http.StatusSeeOther)
 }
 
 // screenshot serves a step's screenshot to the job's owner only.
@@ -119,13 +118,14 @@ func (d Deps) ownsMachine(r *http.Request, name string) bool {
 }
 
 // showSecret renders a credential exactly once. The page must not be cached.
-func (d Deps) showSecret(w http.ResponseWriter, data map[string]any) {
-	w.Header().Set("Cache-Control", "no-store")
-	web.Render(w, "secret.html", data)
+func (d Deps) showSecret(w http.ResponseWriter, r *http.Request, nav, back string, data map[string]any) {
+	data["Back"] = back
+	d.page(w, r, "secret.html", nav, "New credential", data)
 }
 
-func (d Deps) showError(w http.ResponseWriter, message string) {
+// showError explains why a dashboard action was refused, with a way back.
+func (d Deps) showError(w http.ResponseWriter, r *http.Request, nav, back, message string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusBadRequest)
-	web.Render(w, "secret.html", map[string]any{"Error": message})
+	d.page(w, r, "secret.html", nav, "Couldn't do that", map[string]any{"Error": message, "Back": back})
 }
