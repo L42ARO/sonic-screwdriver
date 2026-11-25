@@ -2,7 +2,7 @@
 {{template "head" .}}
 <div class="head">
   <div><h1>Jobs</h1><p>Every operation run, newest first. Open one to see each step and screenshot.</p></div>
-  <div class="actions">
+  <div class="filters">
     <select data-filter="project" aria-label="Filter by project"><option value="">All projects</option>
       {{range .Projects}}<option {{if eq .Name $.Filter.project}}selected{{end}}>{{.Name}}</option>{{end}}</select>
     <select data-filter="machine" aria-label="Filter by machine"><option value="">All machines</option>

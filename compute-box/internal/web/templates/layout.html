@@ -47,7 +47,7 @@
   main { min-width:0; padding:32px 40px 64px; }
   .page { max-width:1120px; margin:0 auto; }
   @media (max-width:900px) {
-    .shell { grid-template-columns:minmax(0,1fr); }
+    .shell { grid-template-columns:minmax(0,1fr); grid-template-rows:auto 1fr; }
     .side { position:sticky; z-index:5; height:auto; flex-direction:row; align-items:center; gap:2px; padding:10px 12px; border-right:0; border-bottom:1px solid var(--line); overflow-x:auto; }
     .brand { padding:0 8px 0 0; } .brand span:last-child { display:none; }
     .nav { display:flex; gap:2px; } .nav .sep { display:none; }
@@ -83,6 +83,20 @@
   .rows > * { display:flex; justify-content:space-between; align-items:center; gap:8px 12px; padding:11px 0; border-top:1px solid var(--line); flex-wrap:wrap; }
   .rows > :first-child { border-top:0; padding-top:0; } .rows > :last-child { padding-bottom:0; }
   .rows > p, .rows > .block { display:block; }
+  /* job rows: one line on wide screens, two on phones (operation + status, then details) */
+  .rows > .job-row { display:grid; grid-template-columns:minmax(0,max-content) minmax(0,1fr) auto auto; gap:4px 12px; align-items:center; }
+  .job-op, .job-where { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .job-status { justify-self:end; }
+  .filters { display:flex; gap:8px; flex-wrap:wrap; }
+  @media (max-width:640px) {
+    .rows > .job-row { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"op status" "where where" "cost cost"; gap:2px 10px; }
+    .job-op { grid-area:op; } .job-status { grid-area:status; } .job-where { grid-area:where; } .job-cost { grid-area:cost; }
+    .filters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); width:100%; }
+    .filters select { width:100%; min-width:0; text-overflow:ellipsis; }
+    .stats { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .stat { padding:12px 14px; } .stat .value { font-size:20px; }
+    .head { margin-bottom:18px; }
+  }
   a.row-link:hover .name, a.card-link:hover .name { color:var(--accent); }
   a.card-link { display:block; transition:border-color .15s; } a.card-link:hover { border-color:var(--line-2); }
   .name { font-weight:500; transition:color .15s; }
@@ -252,10 +266,11 @@
 {{end}}
 
 {{define "job-rows"}}{{range .}}
-<a class="row-link" href="/jobs/{{.ID}}" data-job data-project="{{.Project}}" data-machine="{{.Machine}}" data-status="{{.Status}}">
-  <span><span class="name">{{.Operation}}</span> <span class="meta">· {{.Project}} · {{.Machine}}</span></span>
-  <span class="actions"><span class="meta">{{.Steps}} steps · {{money .CostUSD}} · {{ago .CreatedAt}}</span>
-    <span class="badge s-{{.Status}}">{{.Status}}{{if .ErrorCode}} · {{.ErrorCode}}{{end}}</span></span>
+<a class="row-link job-row" href="/jobs/{{.ID}}" data-job data-project="{{.Project}}" data-machine="{{.Machine}}" data-status="{{.Status}}">
+  <span class="name job-op">{{.Operation}}</span>
+  <span class="meta job-where">{{.Project}} · {{.Machine}}</span>
+  <span class="meta job-cost">{{.Steps}} steps · {{money .CostUSD}} · {{ago .CreatedAt}}</span>
+  <span class="badge job-status s-{{.Status}}">{{.Status}}{{if .ErrorCode}} · {{.ErrorCode}}{{end}}</span>
 </a>
 {{end}}{{end}}
 
