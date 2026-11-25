@@ -1,3 +1,32 @@
-// Windows resources embedded in local-agent.exe by build.rs.
+// Windows resources embedded in local-agent.exe. build.rs fills in the @...@ values and
+// compiles a copy, so this file is a template.
+#include <winver.h>
+
 // Icon 1 is the app icon: Explorer, taskbar, Alt+Tab, the setup window and the tray.
-1 ICON "icon.ico"
+1 ICON "@ICON@"
+
+// What Windows shows for the program: Task Manager, Startup apps, file properties.
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     @MAJOR@,@MINOR@,@PATCH@,0
+PRODUCTVERSION  @MAJOR@,@MINOR@,@PATCH@,0
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "FileDescription",  "@NAME@"
+      VALUE "ProductName",      "@NAME@"
+      VALUE "FileVersion",      "@VERSION@"
+      VALUE "ProductVersion",   "@VERSION@"
+      VALUE "OriginalFilename", "local-agent.exe"
+      VALUE "InternalName",     "local-agent"
+      VALUE "LegalCopyright",   "AGPL-3.0-only. Source: github.com/L42ARO/sonic-screwdriver"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

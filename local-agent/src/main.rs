@@ -89,7 +89,7 @@ fn main() {
                 windows_sys::Win32::UI::WindowsAndMessaging::MessageBoxW(
                     std::ptr::null_mut(),
                     settings::wide(&error.to_string()).as_ptr(),
-                    settings::wide("Sonic Screwdriver").as_ptr(),
+                    settings::wide(settings::APP_NAME).as_ptr(),
                     0,
                 );
             }

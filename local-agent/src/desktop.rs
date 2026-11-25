@@ -125,7 +125,7 @@ pub fn run() -> Result<()> {
         let hwnd = CreateWindowExW(
             WS_EX_CONTROLPARENT,
             class.as_ptr(),
-            wide("Sonic Screwdriver · Setup").as_ptr(),
+            wide(&format!("{} · Setup", settings::APP_NAME)).as_ptr(),
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
             (GetSystemMetrics(SM_CXSCREEN) - width) / 2,
             (GetSystemMetrics(SM_CYSCREEN) - height) / 2,
@@ -495,7 +495,7 @@ unsafe fn tray(ui: &Ui, operation: u32) {
         data.uCallbackMessage = TRAY;
         data.hIcon = ui.icon;
         let state = ui.controller.status();
-        let tooltip = format!("Sonic Screwdriver — {}", state.message);
+        let tooltip = format!("{} — {}", settings::APP_NAME, state.message);
         for (to, from) in data.szTip.iter_mut().take(127).zip(tooltip.encode_utf16()) {
             *to = from
         }
@@ -784,7 +784,7 @@ unsafe fn show_logs(ui: &Ui) {
         let hwnd = CreateWindowExW(
             0,
             class.as_ptr(),
-            wide("Sonic Screwdriver · Connection logs").as_ptr(),
+            wide(&format!("{} · Connection logs", settings::APP_NAME)).as_ptr(),
             WS_OVERLAPPEDWINDOW | WS_VISIBLE,
             CW_USEDEFAULT,
             CW_USEDEFAULT,

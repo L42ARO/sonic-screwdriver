@@ -67,6 +67,11 @@ pub struct Profile {
     pub credential_id: String,
 }
 /// The hosted compute-box; self-hosters change it in Settings or with `connect --url`.
+/// The name people see: window titles, the tray and dialogs. Set in build.rs, which also
+/// gives it to Windows (Task Manager, Startup apps). Inside this repo it is just "the
+/// local-agent"; on a user's computer it sits among many other programs.
+pub const APP_NAME: &str = env!("SONIC_APP_NAME");
+
 pub const DEFAULT_SERVER_URL: &str = "https://app.sonicscrew.click";
 
 impl Profile {
