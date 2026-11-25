@@ -55,6 +55,8 @@
     .nav a { padding:6px 9px; white-space:nowrap; }
     .side-foot { margin:0 0 0 auto; padding:0 0 0 8px; border:0; flex-direction:row; } .meter { display:none; }
     main { padding:24px 16px 48px; }
+    /* iOS zooms into fields with text under 16px when they are tapped. */
+    input, select, textarea { font-size:16px; }
   }
 
   /* page header */
@@ -172,7 +174,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>{{.Title}} · sonic-screwdriver</title>
 {{template "styles"}}
 </head>
