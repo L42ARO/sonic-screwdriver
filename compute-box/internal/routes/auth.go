@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 	"sync"
@@ -99,7 +100,19 @@ func sameOrigin(r *http.Request) bool {
 }
 
 func secureRequest(r *http.Request) bool {
-	return r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+	return r.TLS != nil || (viaProxy(r) && strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https"))
+}
+
+// viaProxy reports whether the request came through a reverse proxy on this machine or
+// network (nginx on the host reaches the container from a private address), whose
+// X-Forwarded-* headers can be believed. Anyone else can set those headers to anything.
+func viaProxy(r *http.Request) bool {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return false
+	}
+	ip, err := netip.ParseAddr(host)
+	return err == nil && (ip.IsLoopback() || ip.IsPrivate()) && r.Header.Get("X-Forwarded-For") != ""
 }
 
 // accounts is what sign-in implementations use to create users and sessions.
@@ -194,9 +207,16 @@ func (o OwnerLink) Mount(mux *http.ServeMux, acc ext.Accounts) {
 	})
 }
 
-// clientAddress is the connecting IP. X-Forwarded-For is ignored because anyone can set
-// it; behind a reverse proxy all clients share the proxy's budget, which is stricter.
+// clientAddress is the IP the request came from. Behind a local reverse proxy it is the
+// last X-Forwarded-For entry, the one the proxy itself added; earlier entries come from
+// the client and could be forged. Otherwise it is the connecting IP.
 func clientAddress(r *http.Request) string {
+	if viaProxy(r) {
+		forwarded := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+		if last := strings.TrimSpace(forwarded[len(forwarded)-1]); last != "" {
+			return last
+		}
+	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return r.RemoteAddr

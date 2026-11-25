@@ -22,8 +22,11 @@ The box listens on port 6080 on all interfaces (`SONIC_PORT` and `SONIC_PUBLISH_
 change that). Set `SONIC_PUBLIC_URL` in `.env` (e.g. `http://my-server:6080`) so
 sign-in links point at the right address. The dashboard is at `/` and health is at
 `/healthz`. Traffic is plain HTTP unless you put an HTTPS reverse proxy in front (forward
-the `/v1/agent` WebSocket route with upgrade support); credentials and screenshots then
-travel encrypted.
+the `/v1/agent` WebSocket route with upgrade support, and don't buffer responses: job
+events stream); credentials and screenshots then travel encrypted. The box believes the
+proxy's `X-Forwarded-For` and `X-Forwarded-Proto` only on connections from loopback or
+private addresses, and uses the last `X-Forwarded-For` entry (the one the proxy added) as
+the client address for sign-in lockouts.
 
 Without a password, or if you forget it, get a one-time sign-in link (works once, for 24
 hours) and set a new password in the dashboard. Links are printed only to your terminal,

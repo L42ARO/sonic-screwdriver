@@ -328,3 +328,34 @@ func TestPasswordSignIn(t *testing.T) {
 	link, _ := box.db.CreateLoginToken(context.Background(), owner.id, time.Hour)
 	expect(t, post("/login", url.Values{"token": {link}}, ""), 303, "")
 }
+
+// Behind a reverse proxy, lockouts follow each visitor's real address (the last
+// X-Forwarded-For entry), so a stranger's guesses can't lock the owner out.
+func TestLockoutBehindProxy(t *testing.T) {
+	box := newBox(t)
+	owner := newOwner(t, box.db)
+	box.db.SetPassword(context.Background(), owner.id, "correct horse", "")
+	u := box.srv.URL
+	signIn := func(password, forwardedFor string) int {
+		req, _ := http.NewRequest("POST", u+"/login", strings.NewReader(url.Values{"password": {password}}.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", u)
+		req.Header.Set("X-Forwarded-For", forwardedFor)
+		res, err := (&http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}).Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		return res.StatusCode
+	}
+	// The attacker rotates a forged first entry; the proxy's last entry stays theirs.
+	for i := range 5 {
+		signIn("guess", "10.9.9."+itoa(int64(i))+", 203.0.113.7")
+	}
+	if got := signIn("correct horse", "203.0.113.7"); got != 429 {
+		t.Fatalf("attacker not locked out: %d", got)
+	}
+	if got := signIn("correct horse", "198.51.100.4"); got != 303 {
+		t.Fatalf("owner locked out by someone else's guesses: %d", got)
+	}
+}
