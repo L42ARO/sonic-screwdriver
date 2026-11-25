@@ -7,25 +7,24 @@
 use std::ffi::c_void;
 use std::ptr::{null, null_mut};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, SIZE, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::{
-    CreateCompatibleDC, CreateDIBSection, CreateFontW, DeleteDC, DeleteObject, DrawTextW, GetDC,
-    ReleaseDC, SelectObject, SetBkMode, SetTextColor, AC_SRC_ALPHA, AC_SRC_OVER, BITMAPINFO,
-    BITMAPINFOHEADER, BLENDFUNCTION, DIB_RGB_COLORS, DT_CALCRECT, DT_END_ELLIPSIS, DT_NOPREFIX, DT_SINGLELINE,
-    HBITMAP, HDC, HGDIOBJ, TRANSPARENT,
+    AC_SRC_ALPHA, AC_SRC_OVER, BITMAPINFO, BITMAPINFOHEADER, BLENDFUNCTION, CreateCompatibleDC,
+    CreateDIBSection, CreateFontW, DIB_RGB_COLORS, DT_CALCRECT, DT_END_ELLIPSIS, DT_NOPREFIX,
+    DT_SINGLELINE, DeleteDC, DeleteObject, DrawTextW, GetDC, HBITMAP, HDC, HGDIOBJ, ReleaseDC,
+    SelectObject, SetBkMode, SetTextColor, TRANSPARENT,
 };
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetSystemMetrics,
-    PeekMessageW, PostQuitMessage, RegisterClassW, SetWindowDisplayAffinity, ShowWindow,
-    TranslateMessage, UpdateLayeredWindow, MSG, PM_REMOVE, SM_CXSCREEN, SM_CYSCREEN,
-    SW_SHOWNOACTIVATE, ULW_ALPHA, WDA_EXCLUDEFROMCAPTURE, WM_DESTROY, WM_QUIT, WNDCLASSW,
-    WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT,
-    WS_POPUP,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetSystemMetrics, MSG,
+    PM_REMOVE, PeekMessageW, PostQuitMessage, RegisterClassW, SM_CXSCREEN, SM_CYSCREEN,
+    SW_SHOWNOACTIVATE, SetWindowDisplayAffinity, ShowWindow, TranslateMessage, ULW_ALPHA,
+    UpdateLayeredWindow, WDA_EXCLUDEFROMCAPTURE, WM_DESTROY, WM_QUIT, WNDCLASSW, WS_EX_LAYERED,
+    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_POPUP,
 };
 
 /// Width of the glow band, physical pixels.
@@ -46,13 +45,20 @@ pub struct Overlay {
 impl Overlay {
     /// Show the overlay. Returns an error string if the window could not be created.
     pub fn show(status: &str) -> Result<Self, String> {
-        let shared = Arc::new(Mutex::new(Shared { status: status.to_string(), changed: true }));
+        let shared = Arc::new(Mutex::new(Shared {
+            status: status.to_string(),
+            changed: true,
+        }));
         let quit = Arc::new(AtomicBool::new(false));
         let (tx, rx) = mpsc::channel::<Result<(), String>>();
         let (s2, q2) = (shared.clone(), quit.clone());
         let thread = thread::spawn(move || run(s2, q2, tx));
         match rx.recv() {
-            Ok(Ok(())) => Ok(Self { shared, quit, thread: Some(thread) }),
+            Ok(Ok(())) => Ok(Self {
+                shared,
+                quit,
+                thread: Some(thread),
+            }),
             Ok(Err(e)) => Err(e),
             Err(_) => Err("overlay thread died".into()),
         }
@@ -127,7 +133,14 @@ impl Dib {
                 return None;
             }
             let old = SelectObject(hdc, hbm as HGDIOBJ);
-            Some(Self { hdc, hbm, old, bits: bits as *mut u32, w, h })
+            Some(Self {
+                hdc,
+                hbm,
+                old,
+                bits: bits as *mut u32,
+                w,
+                h,
+            })
         }
     }
 
@@ -235,7 +248,10 @@ fn build_tab(body_w: i32) -> Tab {
                         continue;
                     }
                     fi += 1;
-                    if dirs.iter().any(|(dx, dy)| !tab_inside(lx + dx, ly + dy, bw)) {
+                    if dirs
+                        .iter()
+                        .any(|(dx, dy)| !tab_inside(lx + dx, ly + dy, bw))
+                    {
                         ri += 1;
                     }
                 }
@@ -244,7 +260,13 @@ fn build_tab(body_w: i32) -> Tab {
             ring[(y * w + x) as usize] = ri as f32 / 9.0;
         }
     }
-    Tab { w, h, body_w, fill, ring }
+    Tab {
+        w,
+        h,
+        body_w,
+        fill,
+        ring,
+    }
 }
 
 unsafe fn render_text(text: &str) -> TextMask {
@@ -258,8 +280,19 @@ unsafe fn render_text(text: &str) -> TextMask {
 
         let probe = Dib::new(1, 1).expect("probe dib");
         let old_font = SelectObject(probe.hdc, font as HGDIOBJ);
-        let mut r = RECT { left: 0, top: 0, right: 0, bottom: 0 };
-        DrawTextW(probe.hdc, wtext.as_ptr(), n, &mut r, DT_CALCRECT | DT_SINGLELINE | DT_NOPREFIX);
+        let mut r = RECT {
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+        };
+        DrawTextW(
+            probe.hdc,
+            wtext.as_ptr(),
+            n,
+            &mut r,
+            DT_CALCRECT | DT_SINGLELINE | DT_NOPREFIX,
+        );
         SelectObject(probe.hdc, old_font);
         drop(probe);
 
@@ -268,8 +301,19 @@ unsafe fn render_text(text: &str) -> TextMask {
         let old_font = SelectObject(dib.hdc, font as HGDIOBJ);
         SetBkMode(dib.hdc, TRANSPARENT as i32);
         SetTextColor(dib.hdc, 0x00FF_FFFF);
-        let mut rr = RECT { left: 1, top: 1, right: w, bottom: h };
-        DrawTextW(dib.hdc, wtext.as_ptr(), n, &mut rr, DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
+        let mut rr = RECT {
+            left: 1,
+            top: 1,
+            right: w,
+            bottom: h,
+        };
+        DrawTextW(
+            dib.hdc,
+            wtext.as_ptr(),
+            n,
+            &mut rr,
+            DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS,
+        );
         SelectObject(dib.hdc, old_font);
         DeleteObject(font as HGDIOBJ);
         let a = dib.pixels().iter().map(|p| (p & 0xFF) as u8).collect();
@@ -292,8 +336,6 @@ fn over(dst: &mut u32, r: f32, g: f32, b: f32, a: f32) {
     let nb = b * a + db * inv;
     *dst = ((na as u32) << 24) | ((nr as u32) << 16) | ((ng as u32) << 8) | (nb as u32);
 }
-
-
 
 fn paint(dib: &mut Dib, t: f32, text: &TextMask) {
     let (w, h) = (dib.w, dib.h);
@@ -357,7 +399,13 @@ fn paint(dib: &mut Dib, t: f32, text: &TextMask) {
             let dist = ((x as f32 - dx).powi(2) + (y as f32 - dy).powi(2)).sqrt();
             let cover = (dot_r - dist + 0.5).clamp(0.0, 1.0);
             if cover > 0.0 {
-                over(&mut px[(y * w + x) as usize], 255.0, 255.0, 255.0, cover * dot_alpha);
+                over(
+                    &mut px[(y * w + x) as usize],
+                    255.0,
+                    255.0,
+                    255.0,
+                    cover * dot_alpha,
+                );
             }
         }
     }
@@ -464,7 +512,17 @@ fn run(shared: Arc<Mutex<Shared>>, quit: Arc<AtomicBool>, ready: mpsc::Sender<Re
                     SourceConstantAlpha: 255,
                     AlphaFormat: AC_SRC_ALPHA as u8,
                 };
-                UpdateLayeredWindow(hwnd, null_mut(), &dst, &size, dib.hdc, &src, 0, &blend, ULW_ALPHA);
+                UpdateLayeredWindow(
+                    hwnd,
+                    null_mut(),
+                    &dst,
+                    &size,
+                    dib.hdc,
+                    &src,
+                    0,
+                    &blend,
+                    ULW_ALPHA,
+                );
             }
             thread::sleep(Duration::from_millis(8));
         }
@@ -496,15 +554,25 @@ mod tests {
     fn text_box_is_fixed_width_and_truncates() {
         unsafe {
             let short = render_text("AGENT AT WORK");
-            let long = render_text(&"AGENT AT WORK · step 9/9: typing \"a very long value\" ".repeat(4));
+            let long =
+                render_text(&"AGENT AT WORK · step 9/9: typing \"a very long value\" ".repeat(4));
             assert_eq!(short.w, TEXT_W);
             assert_eq!(long.w, TEXT_W);
             // Long text fills to the right edge (ending in the ellipsis); short text does not.
             let ink_right = |m: &TextMask| {
-                (0..m.w).rev().find(|&x| (0..m.h).any(|y| m.a[(y * m.w + x) as usize] > 0)).unwrap_or(0)
+                (0..m.w)
+                    .rev()
+                    .find(|&x| (0..m.h).any(|y| m.a[(y * m.w + x) as usize] > 0))
+                    .unwrap_or(0)
             };
-            assert!(ink_right(&long) > TEXT_W - 20, "long text not filling the box");
-            assert!(ink_right(&short) < TEXT_W / 2, "short text unexpectedly wide");
+            assert!(
+                ink_right(&long) > TEXT_W - 20,
+                "long text not filling the box"
+            );
+            assert!(
+                ink_right(&short) < TEXT_W / 2,
+                "short text unexpectedly wide"
+            );
         }
     }
 }

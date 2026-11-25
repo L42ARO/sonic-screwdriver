@@ -13,7 +13,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use anyhow::{Context, Result};
 use base64::Engine;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 mod runtime;
 pub use runtime::Controller;
 
@@ -66,7 +66,9 @@ pub fn run(settings: Settings) -> Result<()> {
 }
 
 pub fn probe(settings: &Settings) -> Result<()> {
-    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
     rt.block_on(runtime::probe(settings))
 }
 
@@ -94,7 +96,12 @@ fn start_screen_thread(max_width: u32, overlay: bool) -> Result<(std_mpsc::Sende
                     if let Some(shot) = r.screenshot.as_mut() {
                         shot.png_base64 = Some(engine.encode(&shot.png));
                     }
-                    eprintln!("{} {} ({} ms)", if r.ok { "ok  " } else { "FAIL" }, action.describe(), r.elapsed_ms);
+                    eprintln!(
+                        "{} {} ({} ms)",
+                        if r.ok { "ok  " } else { "FAIL" },
+                        action.describe(),
+                        r.elapsed_ms
+                    );
                     let _ = reply.send(r);
                 }
                 Work::JobStart(operation) => {
@@ -114,7 +121,10 @@ fn start_screen_thread(max_width: u32, overlay: bool) -> Result<(std_mpsc::Sende
 
 /// Spreads reconnects by +/-20% so many agents don't retry in lockstep.
 fn jitter(d: Duration) -> Duration {
-    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).map(|t| t.subsec_nanos()).unwrap_or(0);
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|t| t.subsec_nanos())
+        .unwrap_or(0);
     let factor = 0.8 + (nanos % 1000) as f64 / 1000.0 * 0.4;
     d.mul_f64(factor)
 }

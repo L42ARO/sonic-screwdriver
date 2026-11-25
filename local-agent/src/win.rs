@@ -1,13 +1,14 @@
 //! Thin Win32 helpers: DPI awareness and top-level window enumeration / focus.
 
 use windows_sys::Win32::Foundation::{HWND, LPARAM, RECT};
-use windows_sys::Win32::UI::HiDpi::{
-    SetProcessDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2,
-};
 use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+use windows_sys::Win32::UI::HiDpi::{
+    DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetProcessDpiAwarenessContext,
+};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    BringWindowToTop, EnumWindows, GetForegroundWindow, GetWindowRect, GetWindowTextLengthW, GetWindowTextW,
-    GetWindowThreadProcessId, IsIconic, IsWindowVisible, SetForegroundWindow, ShowWindow, SW_RESTORE,
+    BringWindowToTop, EnumWindows, GetForegroundWindow, GetWindowRect, GetWindowTextLengthW,
+    GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindowVisible, SW_RESTORE,
+    SetForegroundWindow, ShowWindow,
 };
 
 /// Make this process see physical pixels, so screenshot and mouse coordinates agree
@@ -44,7 +45,12 @@ unsafe extern "system" fn enum_cb(hwnd: HWND, lparam: LPARAM) -> i32 {
         let mut buf = vec![0u16; len as usize + 1];
         let n = GetWindowTextW(hwnd, buf.as_mut_ptr(), buf.len() as i32);
         let title = String::from_utf16_lossy(&buf[..n.max(0) as usize]);
-        let mut r = RECT { left: 0, top: 0, right: 0, bottom: 0 };
+        let mut r = RECT {
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+        };
         GetWindowRect(hwnd, &mut r);
         let mut pid = 0;
         GetWindowThreadProcessId(hwnd, &mut pid);

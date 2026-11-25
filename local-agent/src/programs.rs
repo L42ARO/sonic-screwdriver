@@ -2,7 +2,7 @@
 use crate::win::{self, TopWindow};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::os::windows::process::CommandExt;
 use std::{
     collections::HashMap,
@@ -16,10 +16,10 @@ use windows_sys::Win32::{
     Foundation::{CloseHandle, INVALID_HANDLE_VALUE},
     System::{
         Diagnostics::ToolHelp::{
-            CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+            CreateToolhelp32Snapshot, PROCESSENTRY32W, Process32FirstW, Process32NextW,
             TH32CS_SNAPPROCESS,
         },
-        Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION},
+        Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW},
     },
 };
 
@@ -72,7 +72,9 @@ fn expand_vars(text: &str, lookup: &dyn Fn(&str) -> Option<String>) -> Result<St
         name.chars()
             .next()
             .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
-            && name.chars().all(|c| c.is_ascii_alphanumeric() || "_()".contains(c))
+            && name
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || "_()".contains(c))
     };
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
@@ -223,7 +225,10 @@ impl Launcher {
             || (!installation.working_directory.is_empty()
                 && !Path::new(&installation.working_directory).is_absolute())
         {
-            return Err(error("invalid_launch_configuration", "absolute paths, a nonempty window matcher and a startup timeout <=120000 ms are required"));
+            return Err(error(
+                "invalid_launch_configuration",
+                "absolute paths, a nonempty window matcher and a startup timeout <=120000 ms are required",
+            ));
         }
         let key = serde_json::to_string(&(
             &installation.executable,
@@ -299,7 +304,10 @@ impl Launcher {
                 drop(child);
             }
             if started.elapsed() >= timeout {
-                return Err(error("startup_timeout", "program is running but no matching window appeared; inspect running applications before retrying"));
+                return Err(error(
+                    "startup_timeout",
+                    "program is running but no matching window appeared; inspect running applications before retrying",
+                ));
             }
             thread::sleep(Duration::from_millis(200));
         }
@@ -343,9 +351,17 @@ mod tests {
         app.executable = r"%SONIC_AGENT_DIR%\demo\app.exe".into();
         app.args = vec![r"%SONIC_AGENT_DIR%\demo\data.json".into(), "50%".into()];
         let expanded = app.expanded().unwrap();
-        let dir = std::env::current_exe().unwrap().parent().unwrap().display().to_string();
+        let dir = std::env::current_exe()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .display()
+            .to_string();
         assert_eq!(expanded.executable, format!(r"{dir}\demo\app.exe"));
-        assert_eq!(expanded.args, vec![format!(r"{dir}\demo\data.json"), "50%".to_string()]);
+        assert_eq!(
+            expanded.args,
+            vec![format!(r"{dir}\demo\data.json"), "50%".to_string()]
+        );
     }
     fn installation() -> Installation {
         Installation {
@@ -422,7 +438,7 @@ mod tests {
             fn drop(&mut self) {
                 unsafe {
                     use windows_sys::Win32::System::Threading::{
-                        OpenProcess, TerminateProcess, PROCESS_TERMINATE,
+                        OpenProcess, PROCESS_TERMINATE, TerminateProcess,
                     };
                     let h = OpenProcess(PROCESS_TERMINATE, 0, self.0);
                     if !h.is_null() {

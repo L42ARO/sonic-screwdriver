@@ -3,7 +3,7 @@
 use std::thread;
 use std::time::Duration;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use enigo::{Axis, Button, Coordinate, Direction, Enigo, Key, Keyboard, Mouse, Settings};
 
 use crate::protocol::MouseButton;
@@ -22,7 +22,9 @@ impl Input {
     }
 
     pub fn move_to(&mut self, x: i32, y: i32) -> Result<()> {
-        self.enigo.move_mouse(x, y, Coordinate::Abs).map_err(|e| anyhow!("move: {e}"))?;
+        self.enigo
+            .move_mouse(x, y, Coordinate::Abs)
+            .map_err(|e| anyhow!("move: {e}"))?;
         thread::sleep(MOVE_SETTLE);
         Ok(())
     }
@@ -38,23 +40,31 @@ impl Input {
             if i > 0 {
                 thread::sleep(CLICK_GAP);
             }
-            self.enigo.button(b, Direction::Click).map_err(|e| anyhow!("click: {e}"))?;
+            self.enigo
+                .button(b, Direction::Click)
+                .map_err(|e| anyhow!("click: {e}"))?;
         }
         Ok(())
     }
 
     pub fn drag(&mut self, from: (i32, i32), to: (i32, i32)) -> Result<()> {
         self.move_to(from.0, from.1)?;
-        self.enigo.button(Button::Left, Direction::Press).map_err(|e| anyhow!("drag press: {e}"))?;
+        self.enigo
+            .button(Button::Left, Direction::Press)
+            .map_err(|e| anyhow!("drag press: {e}"))?;
         let steps = 12;
         for i in 1..=steps {
             let t = i as f32 / steps as f32;
             let x = from.0 + ((to.0 - from.0) as f32 * t).round() as i32;
             let y = from.1 + ((to.1 - from.1) as f32 * t).round() as i32;
-            self.enigo.move_mouse(x, y, Coordinate::Abs).map_err(|e| anyhow!("drag move: {e}"))?;
+            self.enigo
+                .move_mouse(x, y, Coordinate::Abs)
+                .map_err(|e| anyhow!("drag move: {e}"))?;
             thread::sleep(Duration::from_millis(15));
         }
-        self.enigo.button(Button::Left, Direction::Release).map_err(|e| anyhow!("drag release: {e}"))?;
+        self.enigo
+            .button(Button::Left, Direction::Release)
+            .map_err(|e| anyhow!("drag release: {e}"))?;
         Ok(())
     }
 
@@ -62,10 +72,14 @@ impl Input {
     pub fn scroll(&mut self, x: i32, y: i32, dx: i32, dy: i32) -> Result<()> {
         self.move_to(x, y)?;
         if dy != 0 {
-            self.enigo.scroll(dy, Axis::Vertical).map_err(|e| anyhow!("scroll: {e}"))?;
+            self.enigo
+                .scroll(dy, Axis::Vertical)
+                .map_err(|e| anyhow!("scroll: {e}"))?;
         }
         if dx != 0 {
-            self.enigo.scroll(dx, Axis::Horizontal).map_err(|e| anyhow!("scroll: {e}"))?;
+            self.enigo
+                .scroll(dx, Axis::Horizontal)
+                .map_err(|e| anyhow!("scroll: {e}"))?;
         }
         Ok(())
     }
@@ -88,7 +102,11 @@ impl Input {
 
     /// Press a chord like "ctrl+shift+s", "alt+f4", "enter", "f3", or a single character.
     pub fn key_chord(&mut self, chord: &str) -> Result<()> {
-        let parts: Vec<&str> = chord.split('+').map(str::trim).filter(|s| !s.is_empty()).collect();
+        let parts: Vec<&str> = chord
+            .split('+')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .collect();
         if parts.is_empty() {
             return Err(anyhow!("empty key chord"));
         }
@@ -96,11 +114,18 @@ impl Input {
         let mods: Vec<Key> = mods.iter().map(|m| parse_key(m)).collect::<Result<_>>()?;
         let main = parse_key(main)?;
         for m in &mods {
-            self.enigo.key(*m, Direction::Press).map_err(|e| anyhow!("key press: {e}"))?;
+            self.enigo
+                .key(*m, Direction::Press)
+                .map_err(|e| anyhow!("key press: {e}"))?;
         }
-        let r = self.enigo.key(main, Direction::Click).map_err(|e| anyhow!("key: {e}"));
+        let r = self
+            .enigo
+            .key(main, Direction::Click)
+            .map_err(|e| anyhow!("key: {e}"));
         for m in mods.iter().rev() {
-            self.enigo.key(*m, Direction::Release).map_err(|e| anyhow!("key release: {e}"))?;
+            self.enigo
+                .key(*m, Direction::Release)
+                .map_err(|e| anyhow!("key release: {e}"))?;
         }
         r
     }

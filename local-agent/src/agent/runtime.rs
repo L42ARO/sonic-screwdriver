@@ -287,7 +287,11 @@ async fn connect(
         ));
     }
     // The token decides which machine this is; the server says which in its welcome.
-    let connected = if welcome.machine.is_empty() { "Connected".to_string() } else { format!("Connected as {}", welcome.machine) };
+    let connected = if welcome.machine.is_empty() {
+        "Connected".to_string()
+    } else {
+        format!("Connected as {}", welcome.machine)
+    };
     report(state, format!("{connected} — ready"), true, false);
     let (mut sink, mut stream) = ws.split();
     let (out_tx, mut out_rx) = mpsc::unbounded_channel::<Message>();

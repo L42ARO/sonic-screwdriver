@@ -116,6 +116,7 @@ pub fn run() -> Result<()> {
         wc.lpszClassName = class.as_ptr();
         wc.hbrBackground = GetStockObject(WHITE_BRUSH).cast();
         wc.hCursor = LoadCursorW(null_mut(), IDC_ARROW);
+        wc.hIcon = app_icon(SM_CXICON);
         if RegisterClassW(&wc) == 0 {
             return Err(std::io::Error::last_os_error()).context("Registering setup window");
         }
@@ -141,7 +142,12 @@ pub fn run() -> Result<()> {
         ui.hwnd = hwnd;
         build_controls(&mut ui);
         ui.taskbar_created = RegisterWindowMessageW(wide("TaskbarCreated").as_ptr());
-        ui.icon = monochrome_icon();
+        ui.icon = app_icon(SM_CXSMICON);
+        if ui.icon.is_null() {
+            ui.icon = monochrome_icon(); // built without a resource compiler
+        } else {
+            SendMessageW(hwnd, WM_SETICON, ICON_SMALL as WPARAM, ui.icon as LPARAM);
+        }
         tray(&ui, NIM_ADD);
         SetTimer(hwnd, 1, 300, None);
         populate(&mut ui);
@@ -232,10 +238,7 @@ unsafe fn build_controls(ui: &mut Ui) {
             font(15, 600, "Segoe UI"),
         ];
         ui.header = control(ui, "STATIC", "Connect", 0, 28, 22, 388, 36, 0, 1);
-        for (label, y) in [
-            ("Server URL", 72),
-            ("Machine token", 168),
-        ] {
+        for (label, y) in [("Server URL", 72), ("Machine token", 168)] {
             control(ui, "STATIC", label, 0, 28, y, 388, 20, 0, 2);
         }
         ui.url = control(
@@ -342,7 +345,10 @@ unsafe fn populate(ui: &mut Ui) {
 unsafe fn update_warning(ui: &Ui) {
     unsafe {
         let plain = settings::is_unencrypted_remote(&text(ui.url));
-        SetWindowTextW(ui.warning, wide(if plain { PLAIN_WARNING } else { "" }).as_ptr());
+        SetWindowTextW(
+            ui.warning,
+            wide(if plain { PLAIN_WARNING } else { "" }).as_ptr(),
+        );
     }
 }
 unsafe fn text(hwnd: HWND) -> String {
@@ -569,6 +575,23 @@ unsafe fn menu(ui: &mut Ui) {
     }
 }
 
+/// The app icon build.rs embeds (assets/icon.ico, resource 1) at a system icon size, or
+/// null when the build had no Windows resource compiler.
+unsafe fn app_icon(metric: SYSTEM_METRICS_INDEX) -> HICON {
+    unsafe {
+        let size = GetSystemMetrics(metric);
+        LoadImageW(
+            GetModuleHandleW(null()),
+            1 as *const u16,
+            IMAGE_ICON,
+            size,
+            size,
+            LR_DEFAULTCOLOR,
+        ) as HICON
+    }
+}
+
+/// Fallback tray icon drawn in code, for builds without the embedded icon.
 unsafe fn monochrome_icon() -> HICON {
     unsafe {
         let and = [0u8; 128];

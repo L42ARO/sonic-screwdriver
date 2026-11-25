@@ -426,7 +426,11 @@ mod tests {
         );
         let loaded: Profile = serde_json::from_str(&old).unwrap();
         loaded.validate().unwrap();
-        assert!(!serde_json::to_string(&loaded).unwrap().contains("front-desk"));
+        assert!(
+            !serde_json::to_string(&loaded)
+                .unwrap()
+                .contains("front-desk")
+        );
     }
     #[test]
     fn credential_manager_roundtrip_uses_an_isolated_test_entry() {

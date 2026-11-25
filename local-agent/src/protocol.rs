@@ -30,7 +30,12 @@ pub enum Action {
     /// Capture the screen as-is, without waiting for anything.
     Screenshot,
     /// Capture a region (screenshot-space rect) at full physical resolution.
-    Zoom { x: u32, y: u32, w: u32, h: u32 },
+    Zoom {
+        x: u32,
+        y: u32,
+        w: u32,
+        h: u32,
+    },
     Click {
         x: i32,
         y: i32,
@@ -39,10 +44,22 @@ pub enum Action {
         #[serde(default = "one")]
         count: u8,
     },
-    DoubleClick { x: i32, y: i32 },
-    RightClick { x: i32, y: i32 },
-    Move { x: i32, y: i32 },
-    Drag { from: [i32; 2], to: [i32; 2] },
+    DoubleClick {
+        x: i32,
+        y: i32,
+    },
+    RightClick {
+        x: i32,
+        y: i32,
+    },
+    Move {
+        x: i32,
+        y: i32,
+    },
+    Drag {
+        from: [i32; 2],
+        to: [i32; 2],
+    },
     /// Scroll at a position. dy > 0 scrolls down, dx > 0 scrolls right, in wheel notches.
     Scroll {
         x: i32,
@@ -53,7 +70,9 @@ pub enum Action {
         dy: i32,
     },
     /// Type literal text (unicode), as a person would at the keyboard.
-    Type { text: String },
+    Type {
+        text: String,
+    },
     /// Press a key or chord, e.g. "enter", "tab", "ctrl+a", "alt+f4", "f3". `count` repeats it.
     Key {
         keys: String,
@@ -61,9 +80,13 @@ pub enum Action {
         count: u8,
     },
     /// Sleep, then screenshot.
-    Wait { ms: u64 },
+    Wait {
+        ms: u64,
+    },
     /// Bring the first visible window whose title contains the text to the front.
-    FocusWindow { title_contains: String },
+    FocusWindow {
+        title_contains: String,
+    },
 }
 
 impl Action {
@@ -74,19 +97,43 @@ impl Action {
             Action::LaunchProgram { .. } => "opening configured program".into(),
             Action::Screenshot => "taking a screenshot".into(),
             Action::Zoom { x, y, w, h } => format!("zooming into {w}x{h} at ({x}, {y})"),
-            Action::Click { x, y, button, count } => {
-                let b = match button { MouseButton::Left => "", MouseButton::Right => "right-", MouseButton::Middle => "middle-" };
-                if *count > 1 { format!("{b}clicking ({x}, {y}) x{count}") } else { format!("{b}clicking ({x}, {y})") }
+            Action::Click {
+                x,
+                y,
+                button,
+                count,
+            } => {
+                let b = match button {
+                    MouseButton::Left => "",
+                    MouseButton::Right => "right-",
+                    MouseButton::Middle => "middle-",
+                };
+                if *count > 1 {
+                    format!("{b}clicking ({x}, {y}) x{count}")
+                } else {
+                    format!("{b}clicking ({x}, {y})")
+                }
             }
             Action::DoubleClick { x, y } => format!("double-clicking ({x}, {y})"),
             Action::RightClick { x, y } => format!("right-clicking ({x}, {y})"),
             Action::Move { x, y } => format!("moving the mouse to ({x}, {y})"),
-            Action::Drag { from, to } => format!("dragging ({}, {}) to ({}, {})", from[0], from[1], to[0], to[1]),
+            Action::Drag { from, to } => format!(
+                "dragging ({}, {}) to ({}, {})",
+                from[0], from[1], to[0], to[1]
+            ),
             Action::Scroll { dx, dy, .. } => format!("scrolling {dx},{dy}"),
             Action::Type { text } => format!("typing \"{text}\""),
-            Action::Key { keys, count } => if *count > 1 { format!("pressing {keys} x{count}") } else { format!("pressing {keys}") },
+            Action::Key { keys, count } => {
+                if *count > 1 {
+                    format!("pressing {keys} x{count}")
+                } else {
+                    format!("pressing {keys}")
+                }
+            }
             Action::Wait { ms } => format!("waiting {ms} ms"),
-            Action::FocusWindow { title_contains } => format!("focusing window \"{title_contains}\""),
+            Action::FocusWindow { title_contains } => {
+                format!("focusing window \"{title_contains}\"")
+            }
         }
     }
 

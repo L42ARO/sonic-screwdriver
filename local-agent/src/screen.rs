@@ -4,8 +4,8 @@ use std::io::Cursor;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use anyhow::{anyhow, Context, Result};
-use image::{imageops::FilterType, DynamicImage, ImageFormat, RgbaImage};
+use anyhow::{Context, Result, anyhow};
+use image::{DynamicImage, ImageFormat, RgbaImage, imageops::FilterType};
 use xcap::Monitor;
 
 use crate::protocol::Shot;
@@ -33,10 +33,22 @@ impl Screen {
         let phys_w = monitor.width()?;
         let phys_h = monitor.height()?;
         let origin = (monitor.x()?, monitor.y()?);
-        let scale = if phys_w > max_width { phys_w as f32 / max_width as f32 } else { 1.0 };
+        let scale = if phys_w > max_width {
+            phys_w as f32 / max_width as f32
+        } else {
+            1.0
+        };
         let shot_w = (phys_w as f32 / scale).round() as u32;
         let shot_h = (phys_h as f32 / scale).round() as u32;
-        Ok(Self { monitor, origin, phys_w, phys_h, shot_w, shot_h, scale })
+        Ok(Self {
+            monitor,
+            origin,
+            phys_w,
+            phys_h,
+            shot_w,
+            shot_h,
+            scale,
+        })
     }
 
     /// Screenshot-space point -> absolute physical screen point.
@@ -90,10 +102,14 @@ impl Screen {
         if px + pw > self.phys_w || py + ph > self.phys_h {
             return Err(anyhow!(
                 "zoom region {x},{y} {w}x{h} exceeds the {}x{} screenshot",
-                self.shot_w, self.shot_h
+                self.shot_w,
+                self.shot_h
             ));
         }
-        let mut img = self.monitor.capture_region(px, py, pw, ph).context("capturing region")?;
+        let mut img = self
+            .monitor
+            .capture_region(px, py, pw, ph)
+            .context("capturing region")?;
         let mut scale = 1.0 / s; // physical px per zoom px: zoom shows more detail than the screenshot
         if img.width() > self.shot_w {
             let f = self.shot_w as f32 / img.width() as f32;

@@ -1,0 +1,3 @@
+// Windows resources embedded in local-agent.exe by build.rs.
+// Icon 1 is the app icon: Explorer, taskbar, Alt+Tab, the setup window and the tray.
+1 ICON "icon.ico"

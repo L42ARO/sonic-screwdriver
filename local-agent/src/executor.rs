@@ -3,7 +3,7 @@
 use std::thread;
 use std::time::{Duration, Instant};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 use crate::input::Input;
 use crate::overlay::Overlay;
@@ -59,9 +59,11 @@ impl Executor {
             Ok(r) => r,
             Err(e) => {
                 let mut r = ActionResult::err(action, &e);
-                r.error_code = e.downcast_ref::<crate::programs::AppError>().map(|e| e.code.to_string());
+                r.error_code = e
+                    .downcast_ref::<crate::programs::AppError>()
+                    .map(|e| e.code.to_string());
                 r
-            },
+            }
         };
         r.elapsed_ms = t.elapsed().as_millis() as u64;
         r
@@ -84,7 +86,12 @@ impl Executor {
             Action::Zoom { x, y, w, h } => {
                 r.screenshot = Some(self.screen.zoom(*x, *y, *w, *h)?);
             }
-            Action::Click { x, y, button, count } => {
+            Action::Click {
+                x,
+                y,
+                button,
+                count,
+            } => {
                 let (px, py) = self.screen.to_physical(*x, *y);
                 self.input.click(px, py, *button, *count)?;
                 self.after_action(&mut r)?;
@@ -132,7 +139,9 @@ impl Executor {
                 let w = win::list_windows()
                     .into_iter()
                     .find(|w| w.title.to_lowercase().contains(&needle))
-                    .ok_or_else(|| anyhow!("no visible window with title containing {title_contains:?}"))?;
+                    .ok_or_else(|| {
+                        anyhow!("no visible window with title containing {title_contains:?}")
+                    })?;
                 self.focus(&w, &mut r)?;
             }
         }
