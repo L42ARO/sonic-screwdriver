@@ -5,7 +5,7 @@
 
 icon.svg is the agent's logo: the dashboard logo (compute-box/internal/web/static/logo.svg)
 in black and white. icon.ico holds every size Windows asks for (Explorer, taskbar, tray,
-Alt+Tab); build.rs embeds it in local-agent.exe.
+Alt+Tab); build.rs embeds it in SonicScrew-Local-Agent.exe.
 
 Needs Microsoft Edge or Google Chrome (to draw the SVG) and Pillow (pip install pillow).
 """

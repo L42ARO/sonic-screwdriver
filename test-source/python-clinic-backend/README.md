@@ -70,7 +70,7 @@ $env:DENTASOFT_MACHINE = "demo-machine"
 Then `GET http://localhost:8000/patients/P-1004`, or open `http://localhost:8000/docs`.
 
 By default the agent opens `DentaSoft.exe` from the release zip: the `demo` folder next to
-`local-agent.exe` (`%SONIC_AGENT_DIR%\demo\DentaSoft.exe`, expanded by the agent on its own
+`SonicScrew-Local-Agent.exe` (`%SONIC_AGENT_DIR%\demo\DentaSoft.exe`, expanded by the agent on its own
 computer). Set `DENTASOFT_EXECUTABLE` if it is somewhere else. To run DentaSoft from this
 source checkout instead, set `DENTASOFT_SCRIPT` to the absolute path of
 `test-target\dentasoft\dentasoft.py` (and optionally `DENTASOFT_PYTHON` to the python.exe

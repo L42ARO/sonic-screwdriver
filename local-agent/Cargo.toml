@@ -4,6 +4,12 @@ version = "0.1.0"
 edition = "2024"
 license = "AGPL-3.0-only"
 
+# The package (and the folder, settings and other internal names) is "local-agent"; the
+# program people download and run is SonicScrew-Local-Agent.exe.
+[[bin]]
+name = "SonicScrew-Local-Agent"
+path = "src/main.rs"
+
 [dependencies]
 anyhow = "1.0.104"
 base64 = "0.23.1"

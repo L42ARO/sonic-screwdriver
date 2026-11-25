@@ -11,16 +11,16 @@ keyboard out. There is deliberately no accessibility-tree or window-message shor
 
 ```
 cargo build --release
-./target/release/local-agent.exe screenshot --out shot.png
-./target/release/local-agent.exe windows
-./target/release/local-agent.exe exec scripts/dentasoft-smoke.json --out-dir run-out
+./target/release/SonicScrew-Local-Agent.exe screenshot --out shot.png
+./target/release/SonicScrew-Local-Agent.exe windows
+./target/release/SonicScrew-Local-Agent.exe exec scripts/dentasoft-smoke.json --out-dir run-out
 ```
 
 Use the release build. The debug build encodes screenshots several times slower.
 
 ## Desktop setup and tray
 
-Double-click `local-agent.exe` with no arguments. The first run opens a black-and-white
+Double-click `SonicScrew-Local-Agent.exe` with no arguments. The first run opens a black-and-white
 setup window for the compute-box URL, the machine token and optional start at sign-in.
 Get the **machine token** from the compute-box dashboard's **Add machine** button; it
 identifies this computer as that machine. Never enter an OpenAI key here. Test checks the
@@ -54,9 +54,9 @@ it does not install a Windows service or enable unattended use of a locked deskt
 ## Connected mode
 
 ```
-./target/release/local-agent.exe connect --url http://localhost:8080 --token sonic_mt_...
+./target/release/SonicScrew-Local-Agent.exe connect --url http://localhost:8080 --token sonic_mt_...
 # Or, after configuring the desktop app:
-./target/release/local-agent.exe connect
+./target/release/SonicScrew-Local-Agent.exe connect
 ```
 
 Dials out to the compute-box (`--url`, saved preference, then localhost), says hello
@@ -88,7 +88,7 @@ The ignored lifecycle helper is invoked by its parent test rather than run direc
 From the repo root, after building both binaries, a process-level smoke test is available:
 
 ```powershell
-python local-agent/tests/connection_smoke.py --box-exe path/to/compute-box.exe --agent-exe local-agent/target/release/local-agent.exe
+python local-agent/tests/connection_smoke.py --box-exe path/to/compute-box.exe --agent-exe local-agent/target/release/SonicScrew-Local-Agent.exe
 ```
 
 It uses temporary server data and settings, starts no desktop jobs and makes no model

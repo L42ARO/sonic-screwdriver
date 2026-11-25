@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from sonic_screwdriver import Sonic, Program, Machine, InstalledProgram
 
 # Where DentaSoft is on the agent's Windows machine. Paths are resolved there, not here.
-# By default: DentaSoft.exe from the release zip, in the demo folder beside local-agent.exe
+# By default: DentaSoft.exe from the release zip, in the demo folder beside SonicScrew-Local-Agent.exe
 # (the agent expands %SONIC_AGENT_DIR% to its own folder). DENTASOFT_EXECUTABLE points
 # elsewhere. To run the demo from a source checkout instead, set DENTASOFT_SCRIPT to
 # test-target\dentasoft\dentasoft.py (and DENTASOFT_PYTHON to the python.exe to run it with).

@@ -39,7 +39,7 @@ impl Installation {
     /// Expands Windows-style `%NAME%` environment variables in the executable, arguments
     /// and working directory, on this machine. Configurations can then name locations that
     /// differ per computer without revealing anyone's user folder. `%SONIC_AGENT_DIR%` is
-    /// the folder holding local-agent.exe, so programs shipped beside it work wherever the
+    /// the folder holding SonicScrew-Local-Agent.exe, so programs shipped beside it work wherever the
     /// release was unpacked. Text like `50%` that is not a variable is left alone.
     pub fn expanded(&self) -> Result<Installation> {
         let lookup = |name: &str| -> Option<String> {

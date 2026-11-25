@@ -1,4 +1,4 @@
-// Embeds the icon and version info (assets/local-agent.rc) in local-agent.exe. Without a
+// Embeds the icon and version info (assets/local-agent.rc) in SonicScrew-Local-Agent.exe. Without a
 // Windows resource compiler the build still succeeds; the agent then falls back to a drawn
 // tray icon and Windows shows the file name instead of the app name.
 use std::{env, fs, path::PathBuf};
@@ -23,6 +23,6 @@ fn main() {
     let out = PathBuf::from(env::var("OUT_DIR").unwrap()).join("local-agent.rc");
     fs::write(&out, rc).unwrap();
     if let Err(e) = embed_resource::compile(&out, embed_resource::NONE).manifest_optional() {
-        println!("cargo:warning=local-agent.exe will have no icon or app name: {e}");
+        println!("cargo:warning=SonicScrew-Local-Agent.exe will have no icon or app name: {e}");
     }
 }

@@ -1,4 +1,4 @@
-// Windows resources embedded in local-agent.exe. build.rs fills in the @...@ values and
+// Windows resources embedded in SonicScrew-Local-Agent.exe. build.rs fills in the @...@ values and
 // compiles a copy, so this file is a template.
 #include <winver.h>
 
@@ -20,7 +20,7 @@ BEGIN
       VALUE "ProductName",      "@NAME@"
       VALUE "FileVersion",      "@VERSION@"
       VALUE "ProductVersion",   "@VERSION@"
-      VALUE "OriginalFilename", "local-agent.exe"
+      VALUE "OriginalFilename", "SonicScrew-Local-Agent.exe"
       VALUE "InternalName",     "local-agent"
       VALUE "LegalCopyright",   "AGPL-3.0-only. Source: github.com/L42ARO/sonic-screwdriver"
     END

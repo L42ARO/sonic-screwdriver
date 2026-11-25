@@ -20,7 +20,7 @@ import (
 // only through the caller API. It manages machines and keys, installs the demo, and runs
 // operations from the Playground through the same job service as the API.
 
-// agentDownload is the local-agent release: local-agent.exe plus the demo apps in demo\.
+// agentDownload is the local-agent release: SonicScrew-Local-Agent.exe plus the demo apps in demo\.
 const agentDownload = "https://github.com/L42ARO/sonic-screwdriver/releases/latest/download/sonic-screwdriver-windows.zip"
 
 // hostedURL is the SDKs' default server; code samples for it can leave the URL out.

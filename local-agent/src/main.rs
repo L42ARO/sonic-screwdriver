@@ -29,7 +29,7 @@ use crate::protocol::Action;
 
 #[derive(Parser)]
 #[command(
-    name = "local-agent",
+    name = "SonicScrew-Local-Agent",
     about = "Executes screen, mouse and keyboard actions on this machine"
 )]
 struct Cli {

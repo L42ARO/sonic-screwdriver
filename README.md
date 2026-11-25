@@ -104,7 +104,7 @@ cd compute-box; go run .
 
 # 2. the local-agent, on the machine with DentaSoft
 cd local-agent; cargo build --release
-.\target\release\local-agent.exe
+.\target\release\SonicScrew-Local-Agent.exe
 # In setup: URL http://localhost:8080 (the default is the hosted https://app.sonicscrew.click)
 # and the machine token (not the OpenAI key).
 
