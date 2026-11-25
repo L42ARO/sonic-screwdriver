@@ -73,6 +73,9 @@ enum Cmd {
 }
 
 fn main() {
+    // https/wss servers need TLS, and rustls needs a crypto backend chosen before the first
+    // connection; without one the connection thread panics.
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let desktop = std::env::args_os().len() == 1;
     unsafe {
         if desktop {
@@ -213,4 +216,18 @@ fn run() -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tls_tests {
+    /// Encrypted (https/wss) connections need a rustls crypto backend in the build; without
+    /// one, building a TLS client panics and the agent can never connect.
+    #[test]
+    fn tls_backend_is_built_in() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let config = rustls::ClientConfig::builder()
+            .with_root_certificates(rustls::RootCertStore::empty())
+            .with_no_client_auth();
+        assert!(!config.alpn_protocols.contains(&b"invalid".to_vec()));
+    }
 }
