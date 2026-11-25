@@ -1,3 +1,28 @@
+<p align="center">
+  <img src=".github/banner/banner.png" alt="sonic-screwdriver: an API for software that has no API" width="100%">
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-22c55e?style=flat-square" alt="License: AGPL-3.0"></a>
+  <a href="sdk"><img src="https://img.shields.io/badge/SDKs-MPL--2.0-22c55e?style=flat-square" alt="SDKs: MPL-2.0"></a>
+  <a href="compute-box"><img src="https://img.shields.io/badge/compute--box-Go_1.26-00ADD8?style=flat-square&logo=go&logoColor=white" alt="compute-box: Go 1.26"></a>
+  <a href="local-agent"><img src="https://img.shields.io/badge/local--agent-Rust-dea584?style=flat-square&logo=rust&logoColor=white" alt="local-agent: Rust"></a>
+  <img src="https://img.shields.io/badge/platform-Windows-0078D6?style=flat-square" alt="Platform: Windows">
+  <img src="https://img.shields.io/badge/status-prototype-f59e0b?style=flat-square" alt="Status: prototype">
+  <br>
+  <a href="https://app.sonicscrew.click"><img src="https://img.shields.io/badge/hosted-app.sonicscrew.click-000?style=flat-square&labelColor=22c55e" alt="Hosted at app.sonicscrew.click"></a>
+  <a href="https://github.com/L42ARO/sonic-screwdriver/stargazers"><img src="https://img.shields.io/github/stars/L42ARO/sonic-screwdriver?style=flat-square&color=22c55e" alt="GitHub stars"></a>
+  <a href="https://github.com/L42ARO/sonic-screwdriver/commits/main"><img src="https://img.shields.io/github/last-commit/L42ARO/sonic-screwdriver?style=flat-square" alt="Last commit"></a>
+</p>
+
+<p align="center">
+  <a href="https://app.sonicscrew.click"><b>Try it hosted</b></a> ·
+  <a href="#running-it">Run it locally</a> ·
+  <a href="#self-hosting">Self-host</a> ·
+  <a href="sdk">SDKs</a> ·
+  <a href="#license">License</a>
+</p>
+
 # sonic-screwdriver
 
 An API for software that has no API. A business calls a normal HTTP endpoint such as

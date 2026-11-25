@@ -1,0 +1,56 @@
+<!doctype html>
+<!-- Source of banner.png (the README banner). To regenerate after editing, from the repo root:
+     msedge --headless=new --hide-scrollbars --window-size=1280,400 --force-device-scale-factor=2
+            --allow-file-access-from-files --virtual-time-budget=3000
+            --screenshot=.github/banner/banner.png file:///<repo>/.github/banner/banner.html -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 400px; overflow: hidden; }
+  body {
+    position: relative; background: #000; color: #fff;
+    font-family: Inter, system-ui, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased;
+    display: flex; align-items: center; padding: 0 96px; gap: 56px;
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.09) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.09) 1px, transparent 1px),
+      linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 64px 64px, 64px 64px, 16px 16px, 16px 16px;
+    background-position: center center;
+    mask-image: radial-gradient(ellipse 75% 85% at 50% 50%, #000 30%, transparent 100%);
+  }
+  .glow { position: absolute; inset: 0; background: radial-gradient(520px circle at 210px 200px, rgba(34,197,94,.22), rgba(34,197,94,.05) 45%, transparent 70%); }
+  .lit {
+    position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(74,222,128,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(74,222,128,.5) 1px, transparent 1px);
+    background-size: 64px 64px; background-position: center center;
+    mask-image: radial-gradient(200px circle at 210px 200px, #000, transparent 75%);
+  }
+  .logo, .text { position: relative; }
+  .logo { width: 180px; height: 180px; flex: none; border-radius: 41px; box-shadow: 0 0 80px rgba(34,197,94,.45), 0 20px 60px rgba(0,0,0,.6); }
+  h1 {
+    font-size: 76px; font-weight: 600; letter-spacing: -0.045em; line-height: 1;
+    background: linear-gradient(180deg, #fff 35%, #8a8a8a); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .tagline { margin-top: 18px; font-size: 30px; color: #a3a3a3; letter-spacing: -0.015em; }
+  .meta { margin-top: 26px; font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-size: 17px; color: #6b6b6b; }
+  .meta b { color: #4ade80; font-weight: 400; }
+</style>
+</head>
+<body>
+  <div class="grid"></div><div class="glow"></div><div class="lit"></div>
+  <img class="logo" src="../../compute-box/internal/web/static/logo.svg" alt="">
+  <div class="text">
+    <h1>sonic-screwdriver</h1>
+    <p class="tagline">An API for software that has no API.</p>
+    <p class="meta"><b>●</b> vision agent · desktop apps · Python / TypeScript / Go</p>
+  </div>
+</body>
+</html>
