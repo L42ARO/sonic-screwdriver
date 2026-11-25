@@ -174,14 +174,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Crect width=%2224%22 height=%2224%22 rx=%225.5%22 fill=%22%2322c55e%22/%3E%3Cg transform=%22translate%2812 12%29 rotate%28-38%29 translate%28-8.8 0%29%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%221.15%22 stroke-linecap=%22square%22%3E%3Crect x=%220%22 y=%22-4.1%22 width=%225.6%22 height=%228.2%22/%3E%3Cpath d=%22M5.6 0 H7.9 V-1.5 H9.8 V1.5 H11.7 V-1.5 H13.6 V1.5 H15.5 V0 H17.6%22/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Crect width=%2224%22 height=%2224%22 rx=%225.5%22 fill=%22%2322c55e%22/%3E%3Cg transform=%22translate%2812 12%29 rotate%28-38%29 scale%280.92%29 translate%28-10.5 0%29%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%220.7%22 stroke-linecap=%22square%22%3E%3Crect x=%220%22 y=%22-4.1%22 width=%225.6%22 height=%228.2%22 fill=%22%23000%22/%3E%3Crect x=%221.7%22 y=%22-1.1%22 width=%222.2%22 height=%222.2%22 fill=%22%2322c55e%22 stroke=%22none%22/%3E%3Cpath d=%22M5.6 0 H8.1 V-1.8 H10.8 V1.8 H13.5 V-1.8 H16.2 V1.8 H18.9 V0 H21%22 stroke-width=%221.4%22/%3E%3C/g%3E%3C/svg%3E">
 <title>{{.Title}} · sonic-screwdriver</title>
 {{template "styles"}}
 </head>
 <body>
 <div class="shell">
 <aside class="side">
-  <a class="brand" href="/"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#22c55e"/><g transform="translate(12 12) rotate(-38) translate(-8.8 0)" fill="none" stroke="#000" stroke-width="1.2" stroke-linecap="square"><rect x="0" y="-4.1" width="5.6" height="8.2"/><path d="M5.6 0 H7.9 V-1.5 H9.8 V1.5 H11.7 V-1.5 H13.6 V1.5 H15.5 V0 H17.6"/></g></svg><span>sonic-screwdriver</span></a>
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#22c55e"/><g transform="translate(12 12) rotate(-38) scale(0.92) translate(-10.5 0)" fill="none" stroke="#000" stroke-width="0.7" stroke-linecap="square"><rect x="0" y="-4.1" width="5.6" height="8.2" fill="#000"/><rect x="1.7" y="-1.1" width="2.2" height="2.2" fill="#22c55e" stroke="none"/><path d="M5.6 0 H8.1 V-1.8 H10.8 V1.8 H13.5 V-1.8 H16.2 V1.8 H18.9 V0 H21" stroke-width="1.4"/></g></svg><span>sonic-screwdriver</span></a>
   <nav class="nav" aria-label="Main">
     <a href="/" {{if eq .Nav "overview"}}class="on" aria-current="page"{{end}}>{{template "icon" "overview"}}Overview</a>
     <a href="/playground" {{if eq .Nav "playground"}}class="on" aria-current="page"{{end}}>{{template "icon" "playground"}}Playground</a>
