@@ -281,6 +281,28 @@ impl Launcher {
                         "program exited before a matching window appeared",
                     ));
                 }
+                // Name what is missing: Windows' own errors ("the directory name is invalid")
+                // don't say which path, and stale paths are the usual cause.
+                if !Path::new(&installation.executable).is_file() {
+                    return Err(error(
+                        "launch_failed",
+                        format!(
+                            "the program {} does not exist on this computer; update this machine's installation path for it",
+                            installation.executable
+                        ),
+                    ));
+                }
+                if !installation.working_directory.is_empty()
+                    && !Path::new(&installation.working_directory).is_dir()
+                {
+                    return Err(error(
+                        "launch_failed",
+                        format!(
+                            "the working directory {} does not exist on this computer; update this machine's installation path for the program",
+                            installation.working_directory
+                        ),
+                    ));
+                }
                 let mut command = Command::new(&installation.executable);
                 // GUI windows still appear; console hosts do not create an extra terminal.
                 command.creation_flags(0x08000000); // CREATE_NO_WINDOW
@@ -404,9 +426,29 @@ mod tests {
         let mut app = installation();
         app.executable = r"C:\sonic-does-not-exist\missing.exe".into();
         let err = Launcher::default().open(&app).unwrap_err();
-        assert_eq!(
-            err.downcast_ref::<AppError>().unwrap().code,
-            "launch_failed"
+        let err = err.downcast_ref::<AppError>().unwrap();
+        assert_eq!(err.code, "launch_failed");
+        assert!(
+            err.message.contains(r"C:\sonic-does-not-exist\missing.exe"),
+            "{}",
+            err.message
+        );
+    }
+    #[test]
+    fn missing_working_directory_is_named() {
+        let mut app = installation();
+        // An existing program that isn't running (a running one is adopted, not launched).
+        let windir = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into());
+        app.executable = format!(r"{windir}\System32\where.exe");
+        app.working_directory = r"C:\sonic-does-not-exist\moved".into();
+        let err = Launcher::default().open(&app).unwrap_err();
+        let err = err.downcast_ref::<AppError>().unwrap();
+        assert_eq!(err.code, "launch_failed");
+        assert!(
+            err.message
+                .contains(r"working directory C:\sonic-does-not-exist\moved"),
+            "{}",
+            err.message
         );
     }
 
