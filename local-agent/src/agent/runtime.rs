@@ -231,7 +231,7 @@ async fn handshake(
         tokio_tungstenite::connect_async(settings.url.as_str()),
     )
     .await??;
-    ws.send(Message::text(json!({"type":"hello","token":settings.token,
+    ws.send(Message::text(json!({"type":"hello","token":settings.token,"machine":settings.machine,
         "instance_id":settings.instance_id,"probe":probe,"version":env!("CARGO_PKG_VERSION"),"screen":screen}).to_string())).await?;
     let welcome = tokio::time::timeout(Duration::from_secs(10), async {
         loop {
@@ -262,7 +262,12 @@ fn rejection_message(welcome: &Inbound) -> String {
     // Never render arbitrary server text into the UI/log; a malicious server can echo a token.
     match welcome.code.as_str(){
         "authentication_failed"=>"Machine token rejected. Add this machine in the dashboard, or regenerate its token, and paste the new token.",
-        "machine_in_use"=>"This machine is already connected from another agent. Close the other agent first.",
+        "machine_in_use"=>"Another computer is already connected with this machine name. Names are unique: give this computer its own name and token, or close the other agent.",
+        // The server names the token's machine; show it only if it is a plain machine name.
+        "machine_mismatch" if crate::settings::valid_machine_name(&welcome.machine) => {
+            return format!("This token is for the machine \"{}\". Set Machine name to {} or use the token made for this name.", welcome.machine, welcome.machine);
+        }
+        "machine_mismatch"=>"This token is for a different machine. Check the Machine name.",
         _=>"Connection rejected by the server. Check the URL and machine token.",
     }.into()
 }
@@ -426,6 +431,7 @@ mod tests {
         let settings = Settings {
             url: format!("ws://{address}"),
             token: "test-only-agent-secret".into(),
+            machine: "test-machine".into(),
             instance_id: "test".into(),
             max_width: 1280,
             overlay: false,

@@ -70,8 +70,9 @@ func (h *Hub) ServeAgent(w http.ResponseWriter, r *http.Request) {
 		ws.Close(websocket.StatusPolicyViolation, "expected hello")
 		return
 	}
-	// The machine token identifies both the owner and the machine; the hello's own
-	// "machine" field (sent by older agents) is ignored.
+	// The machine token identifies both the owner and the machine. The agent also says
+	// which machine it means to be (its Machine name); a different one is refused, so a
+	// name always means one computer.
 	userID, name, ok, err := h.store.MachineByToken(ctx, hi.Token)
 	if err != nil || !ok {
 		if err != nil {
@@ -81,10 +82,16 @@ func (h *Hub) ServeAgent(w http.ResponseWriter, r *http.Request) {
 		ws.Close(websocket.StatusPolicyViolation, "bad token")
 		return
 	}
+	if hi.Machine != "" && hi.Machine != name {
+		writeJSON(ctx, ws, nil, map[string]string{"type": "error", "code": "machine_mismatch", "machine": name,
+			"message": "This token is for the machine " + name + ", not " + hi.Machine + ". Set the agent's Machine name to " + name + ", or use the token made for " + hi.Machine + "."})
+		ws.Close(websocket.StatusPolicyViolation, "machine name does not match token")
+		return
+	}
 	m := Machine{User: userID, Name: name}
 	if hi.Probe {
 		if existing := h.get(m); existing != nil && (hi.InstanceID == "" || existing.instanceID != hi.InstanceID) {
-			writeJSON(ctx, ws, nil, map[string]string{"type": "error", "code": "machine_in_use", "message": "This machine is already connected from another agent."})
+			writeJSON(ctx, ws, nil, map[string]string{"type": "error", "code": "machine_in_use", "message": "Another computer is already connected as " + name + ". Machine names are unique: give this computer its own name and token, or close the other agent."})
 		} else {
 			writeJSON(ctx, ws, nil, map[string]string{"type": "welcome", "machine": name})
 		}
@@ -93,7 +100,7 @@ func (h *Hub) ServeAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	c := &conn{machine: m, instanceID: hi.InstanceID, screen: hi.Screen, ws: ws, pending: map[string]chan Result{}, closed: make(chan struct{})}
 	if !h.register(c) {
-		writeJSON(ctx, ws, nil, map[string]string{"type": "error", "code": "machine_in_use", "message": "This machine is already connected from another agent."})
+		writeJSON(ctx, ws, nil, map[string]string{"type": "error", "code": "machine_in_use", "message": "Another computer is already connected as " + name + ". Machine names are unique: give this computer its own name and token, or close the other agent."})
 		ws.Close(websocket.StatusPolicyViolation, "machine in use")
 		return
 	}

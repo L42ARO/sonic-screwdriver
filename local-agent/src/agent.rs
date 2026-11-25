@@ -27,6 +27,8 @@ const MAX_BACKOFF: Duration = Duration::from_secs(30);
 pub struct Settings {
     pub url: String,
     pub token: String,
+    /// The machine name; the server checks it is the one the token was made for.
+    pub machine: String,
     pub instance_id: String,
     pub max_width: u32,
     pub overlay: bool,

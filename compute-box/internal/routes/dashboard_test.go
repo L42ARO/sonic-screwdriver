@@ -112,6 +112,8 @@ func TestDemoAndPlayground(t *testing.T) {
 	run.Set("input", `{"patient_id": "P-1004"}`)
 	expect(t, post("/dashboard/playground/run", run, u), 400, "demo-machine is not connected")
 	token, _ := box.db.IssueMachineToken(context.Background(), owner.id, "demo-machine")
+	// Names are unique: adding one that already has a token is refused with the reason.
+	expect(t, post("/dashboard/machines", url.Values{"name": {"demo-machine"}}, u), 400, "already exists")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go fakeAgent(t, ctx, "ws"+strings.TrimPrefix(u, "http")+"/v1/agent", token, make(chan string, 10))

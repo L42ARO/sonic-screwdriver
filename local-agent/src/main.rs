@@ -50,9 +50,13 @@ enum Cmd {
         /// The compute-box's agent endpoint.
         #[arg(long, env = "SONIC_AGENT_URL")]
         url: Option<String>,
-        /// This machine's token, from the dashboard's "Add machine". It also names the machine.
+        /// This machine's token, from the dashboard (Machines, then Generate token).
         #[arg(long, env = "SONIC_MACHINE_TOKEN")]
         token: Option<String>,
+        /// This machine's name, which the SDKs use; it must be the one the token was made
+        /// for. Defaults to the saved name, then "demo-machine".
+        #[arg(long, env = "SONIC_MACHINE")]
+        machine: Option<String>,
     },
     /// Take one screenshot and write it to a PNG file.
     Screenshot {
@@ -108,7 +112,11 @@ fn run() -> Result<()> {
     let cli = Cli::parse();
     match cli.cmd {
         None => desktop::run()?,
-        Some(Cmd::Connect { url, token }) => {
+        Some(Cmd::Connect {
+            url,
+            token,
+            machine,
+        }) => {
             let Some(_instance) = settings::SingleInstance::acquire()? else {
                 return Ok(());
             };
@@ -126,6 +134,19 @@ fn run() -> Result<()> {
             if token.trim().is_empty() {
                 anyhow::bail!("Machine token cannot be empty")
             }
+            let machine = machine
+                .or_else(|| {
+                    saved
+                        .as_ref()
+                        .map(|p| p.machine.clone())
+                        .filter(|m| !m.is_empty())
+                })
+                .unwrap_or_else(|| settings::DEFAULT_MACHINE.into());
+            if !settings::valid_machine_name(&machine) {
+                anyhow::bail!(
+                    "--machine: start with a letter, then letters, digits, _ or - (up to 64)"
+                )
+            }
             let instance_id = match saved {
                 Some(p) => p.instance_id,
                 None => settings::random_id()?,
@@ -133,6 +154,7 @@ fn run() -> Result<()> {
             agent::run(agent::Settings {
                 url: settings::endpoint(&url)?,
                 token,
+                machine,
                 instance_id,
                 max_width: cli.max_width,
                 overlay: !cli.no_overlay,

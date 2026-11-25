@@ -23,7 +23,8 @@
       <span class="n">{{if .AgentConnected}}✓{{else}}2{{end}}</span>
       <div class="what"><strong>Install the local agent on a Windows computer</strong>
         <p>Download and unzip it (DentaSoft is included in its <code>demo</code> folder). Generate a token for
-          <code>{{.Demo.Machine}}</code> and paste it into the agent's Settings with the URL <code>{{.ServerURL}}</code>.</p></div>
+          <code>{{.Demo.Machine}}</code>, then in the agent keep the Machine name <code>{{.Demo.Machine}}</code> (the default, which the
+          SDK examples use), paste the token, and use the URL <code>{{.ServerURL}}</code>.</p></div>
       <div class="actions">
         <a class="btn sm" href="{{.AgentDownload}}">Download for Windows</a>
         {{if .DemoHasToken}}<a class="btn sm" href="/machines#machine-{{.Demo.Machine}}">Machines</a>{{else}}

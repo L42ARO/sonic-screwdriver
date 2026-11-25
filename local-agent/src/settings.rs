@@ -58,9 +58,10 @@ pub fn directory() -> Result<PathBuf> {
 pub struct Profile {
     pub version: u32,
     pub server_url: String,
-    /// Unused since machine tokens name the machine; kept so older settings files load.
-    #[serde(default, skip_serializing)]
-    #[allow(dead_code)]
+    /// The name the SDKs use to run jobs on this computer. It must be the machine its token
+    /// was made for; the server refuses a mismatch. Empty in settings saved before the
+    /// field came back, which then shows the default.
+    #[serde(default)]
     pub machine: String,
     pub start_at_signin: bool,
     pub instance_id: String,
@@ -74,12 +75,24 @@ pub const APP_NAME: &str = env!("SONIC_APP_NAME");
 
 pub const DEFAULT_SERVER_URL: &str = "https://app.sonicscrew.click";
 
+/// The machine name the demo and the SDK examples use.
+pub const DEFAULT_MACHINE: &str = "demo-machine";
+
+/// Machine names as the server accepts them: a letter, then up to 63 letters, digits, _ or -.
+pub fn valid_machine_name(name: &str) -> bool {
+    name.len() <= 64
+        && name.chars().next().is_some_and(|c| c.is_ascii_alphabetic())
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
 impl Profile {
     pub fn new() -> Result<Self> {
         Ok(Self {
             version: 1,
             server_url: DEFAULT_SERVER_URL.into(),
-            machine: "".into(),
+            machine: DEFAULT_MACHINE.into(),
             start_at_signin: false,
             instance_id: random_id()?,
             credential_id: random_id()?,
@@ -102,9 +115,15 @@ impl Profile {
         if token.trim().is_empty() || token.contains('\0') {
             bail!("Paste the machine token from the dashboard (Add machine)")
         }
+        // Settings saved before the Machine name field have none; the token then decides.
+        let machine = self.machine.trim();
+        if !machine.is_empty() && !valid_machine_name(machine) {
+            bail!("Machine name: start with a letter, then letters, digits, _ or - (up to 64)")
+        }
         Ok(crate::agent::Settings {
             url: endpoint(&self.server_url)?,
             token,
+            machine: machine.to_string(),
             instance_id: self.instance_id.clone(),
             max_width: 1280,
             overlay: true,
@@ -431,10 +450,40 @@ mod tests {
         );
         let loaded: Profile = serde_json::from_str(&old).unwrap();
         loaded.validate().unwrap();
+        assert_eq!(loaded.machine, "front-desk");
         assert!(
-            !serde_json::to_string(&loaded)
+            serde_json::to_string(&loaded)
                 .unwrap()
                 .contains("front-desk")
+        );
+
+        // Saved while the field was gone: no name, so the token alone decides the machine.
+        let unnamed = format!(
+            r#"{{"version":1,"server_url":"https://example.com","start_at_signin":false,"instance_id":"{}","credential_id":"{}"}}"#,
+            p.instance_id, p.credential_id
+        );
+        let loaded: Profile = serde_json::from_str(&unnamed).unwrap();
+        assert_eq!(loaded.connection("sonic_mt_x".into()).unwrap().machine, "");
+    }
+    #[test]
+    fn machine_name_defaults_to_the_demo_and_must_be_a_valid_name() {
+        let mut p = Profile::new().unwrap();
+        assert_eq!(p.machine, DEFAULT_MACHINE);
+        assert_eq!(
+            p.connection("sonic_mt_x".into()).unwrap().machine,
+            "demo-machine"
+        );
+        for bad in ["9lives", "front desk", "a/b", &"x".repeat(65)] {
+            p.machine = bad.to_string();
+            assert!(
+                p.connection("sonic_mt_x".into()).is_err(),
+                "{bad} was accepted"
+            );
+        }
+        p.machine = " front-desk_2 ".into();
+        assert_eq!(
+            p.connection("sonic_mt_x".into()).unwrap().machine,
+            "front-desk_2"
         );
     }
     #[test]

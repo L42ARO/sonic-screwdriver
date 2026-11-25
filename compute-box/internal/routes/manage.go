@@ -13,12 +13,26 @@ import (
 // Machines and API keys are the only things managed from the dashboard; projects,
 // operations and programs change only through the caller API (the SDKs).
 
-// addMachine creates a machine (or reuses one the SDK declared) and shows its new token once.
+// addMachine creates a machine (or claims one the SDK declared, which has no token yet) and
+// shows its new token once. Names are unique per user: a name that already has a token is
+// refused, so adding a machine never cuts off a computer that is using that name.
 func (d Deps) addMachine(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(r.FormValue("name"))
 	if !nameRE.MatchString(name) {
 		d.showError(w, r, "machines", "/machines", "Machine names start with a letter and use at most 64 letters, digits, underscores or hyphens.")
 		return
+	}
+	machines, err := d.Store.ListMachines(r.Context(), userOf(r))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for _, m := range machines {
+		if m.Name == name && m.TokenPrefix != "" {
+			d.showError(w, r, "machines", "/machines", "A machine called "+name+" already exists, and machine names are unique. "+
+				"Pick another name for this computer, or use Regenerate token on "+name+" if you are replacing it (its current agent is disconnected).")
+			return
+		}
 	}
 	d.issueMachineToken(w, r, name, false)
 }
