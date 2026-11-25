@@ -22,7 +22,7 @@ In Go a folder is a package, so the handlers sit next to `dentasoft.go` in packa
 ## Defining an operation
 
 ```go
-var DentalClinic = sonic.NewProject("dental-clinic-go", sonic.WithMachine("dentist-front-desk"))
+var DentalClinic = sonic.NewProject("demo-project-go", sonic.WithMachine("demo-machine"))
 
 type UpdateBalanceInput struct {
 	PatientID string  `json:"patient_id" jsonschema:"pattern=^P-\\d{4}$"`

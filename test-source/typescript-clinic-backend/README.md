@@ -19,7 +19,7 @@ routes/patients.ts     GET /patients/:id, PUT /patients/:id/balance
 ## Defining an operation
 
 ```ts
-export const dentalClinic = new Sonic({ project: "dental-clinic-ts", machine: "dentist-front-desk" });
+export const dentalClinic = new Sonic({ project: "demo-project-ts", machine: "demo-machine" });
 
 export const updateBalance = dentalClinic.operation({
   name: "update_balance",

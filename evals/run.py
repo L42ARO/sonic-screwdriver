@@ -234,7 +234,7 @@ def main():
     ap.add_argument("--cold-start", action="store_true", help="leave the target closed; the AI must open it")
     ap.add_argument("--configure-only", action="store_true", help="sync test program installations and operations without running jobs; run on the target machine")
     ap.add_argument("--url", default=os.getenv("SONIC_URL", "http://127.0.0.1:8080"))
-    ap.add_argument("--machine", default=os.getenv("SONIC_MACHINE", "dentist-front-desk"))
+    ap.add_argument("--machine", default=os.getenv("SONIC_MACHINE", "demo-machine"))
     ap.add_argument("--api-key", default=os.getenv("SONIC_API_KEY"), help="defaults to SONIC_API_KEY")
     args = ap.parse_args()
 

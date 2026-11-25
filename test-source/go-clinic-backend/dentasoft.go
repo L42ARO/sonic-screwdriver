@@ -14,8 +14,8 @@ import (
 
 // DentalClinic is this app's project on the compute-box. SONIC_URL and SONIC_API_KEY set
 // the connection.
-var DentalClinic = sonic.NewProject("dental-clinic-go",
-	sonic.WithMachine(cmp.Or(os.Getenv("DENTASOFT_MACHINE"), "dentist-front-desk")),
+var DentalClinic = sonic.NewProject("demo-project-go",
+	sonic.WithMachine(cmp.Or(os.Getenv("DENTASOFT_MACHINE"), "demo-machine")),
 	sonic.WithPrograms(map[string]sonic.Program{"dentasoft": {Description: "Patient records, appointments and balances."}}),
 	sonic.WithContext(`Use DentaSoft Patient Manager; open the dentasoft program if needed. If its login box is showing,
 		log in with user name drsmith and password molar123. DentaSoft is slow: after each

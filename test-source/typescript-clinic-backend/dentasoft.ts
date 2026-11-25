@@ -10,8 +10,8 @@ import { Sonic } from "sonic-screwdriver";
 
 // This app's project on the compute-box. SONIC_URL and SONIC_API_KEY set the connection.
 export const dentalClinic = new Sonic({
-  project: "dental-clinic-ts",
-  machine: process.env.DENTASOFT_MACHINE ?? "dentist-front-desk",
+  project: "demo-project-ts",
+  machine: process.env.DENTASOFT_MACHINE ?? "demo-machine",
   programs: { dentasoft: { description: "Patient records, appointments and balances." } },
   context:
     "Use DentaSoft Patient Manager; open the dentasoft program if needed. If its login box is showing, log in with " +

@@ -25,7 +25,7 @@ any package. No client code lives in the app.
 ## Defining an operation
 
 ```python
-dental_clinic = Sonic(project="dental-clinic", machine="dentist-front-desk")
+dental_clinic = Sonic(project="demo-project", machine="demo-machine")
 
 @dental_clinic.operation
 async def update_balance(patient_id: PatientId, balance: Annotated[float, Field(ge=0)]) -> BalanceChange:
@@ -54,7 +54,7 @@ evaluation-runner configuration command is needed. A sync failure stops startup 
 
 ## Run
 
-Start the compute-box, add the machine `dentist-front-desk` in its dashboard and connect the
+Start the compute-box, add the machine `demo-machine` in its dashboard and connect the
 local-agent with that machine token, then run from
 this example's directory:
 
@@ -63,7 +63,7 @@ python -m venv .venv
 .\.venv\Scripts\pip install -r requirements.txt
 $env:SONIC_URL = "http://localhost:8080"
 $env:SONIC_API_KEY = "sonic_sk_..."   # from the dashboard: Create API key
-$env:DENTASOFT_MACHINE = "dentist-front-desk"
+$env:DENTASOFT_MACHINE = "demo-machine"
 .\.venv\Scripts\uvicorn main:app --reload
 ```
 

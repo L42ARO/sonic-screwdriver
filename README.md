@@ -74,7 +74,7 @@ Requirements: Windows, Go, Rust, Python 3, and in `compute-box/.env` an OpenAI k
 ```powershell
 # 1. the compute-box. Open http://localhost:8080 and sign in with SONIC_OWNER_PASSWORD.
 cd compute-box; go run .
-# In the dashboard: "Add machine" dentist-front-desk (copy its machine token) and
+# In the dashboard: "Add machine" demo-machine (copy its machine token) and
 # "Create API key" (copy the key). Each is shown only once.
 
 # 2. the local-agent, on the machine with DentaSoft

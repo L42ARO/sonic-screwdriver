@@ -19,7 +19,7 @@ _script = os.getenv("DENTASOFT_SCRIPT", str(
     Path(__file__).resolve().parents[2] / "test-target" / "dentasoft" / "dentasoft.py"
 ))
 front_desk = Machine(
-    name=os.getenv("DENTASOFT_MACHINE", "dentist-front-desk"),
+    name=os.getenv("DENTASOFT_MACHINE", "demo-machine"),
     programs={
         "dentasoft": InstalledProgram(
             executable=os.getenv("DENTASOFT_PYTHON", getattr(sys, "_base_executable", sys.executable)),
@@ -32,7 +32,7 @@ front_desk = Machine(
 
 # This app's project on the compute-box. SONIC_URL and SONIC_API_KEY set the connection.
 dental_clinic = Sonic(
-    project="dental-clinic",
+    project="demo-project",
     machine=front_desk.name,
     programs={"dentasoft": Program(description="Patient records, appointments and balances.")},
     context=(
