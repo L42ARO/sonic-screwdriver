@@ -2,10 +2,12 @@
 use crate::{
     agent,
     settings::{self, Profile, wide},
+    update,
 };
 use anyhow::{Context, Result};
 use std::{
     mem,
+    path::PathBuf,
     ptr::{null, null_mut},
     sync::mpsc,
     thread,
@@ -23,8 +25,8 @@ use windows_sys::Win32::{
         Controls::*,
         Input::KeyboardAndMouse::{GetFocus, SetFocus},
         Shell::{
-            NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NOTIFYICONDATAW,
-            Shell_NotifyIconW,
+            NIF_ICON, NIF_INFO, NIF_MESSAGE, NIF_TIP, NIIF_INFO, NIM_ADD, NIM_DELETE, NIM_MODIFY,
+            NIN_BALLOONUSERCLICK, NOTIFYICONDATAW, Shell_NotifyIconW,
         },
         WindowsAndMessaging::*,
     },
@@ -47,6 +49,7 @@ const PAUSE: u32 = 202;
 const LOGS: u32 = 203;
 const STARTUP: u32 = 204;
 const QUIT: u32 = 205;
+const UPDATE: u32 = 206;
 
 struct Ui {
     controller: agent::Controller,
@@ -68,12 +71,48 @@ struct Ui {
     feedback: Option<String>,
     test: Option<mpsc::Receiver<std::result::Result<(), String>>>,
     taskbar_created: u32,
+    updates: Updates,
+}
+
+/// Update state: offers arrive from the checker thread; nothing is downloaded or installed
+/// until the user accepts.
+struct Updates {
+    offers: mpsc::Receiver<update::Offer>,
+    /// The newest version offered, if any.
+    offer: Option<update::Offer>,
+    downloading: Option<mpsc::Receiver<std::result::Result<PathBuf, String>>>,
+    /// Downloaded and verified; installed as soon as no job is running.
+    staged: Option<PathBuf>,
+    /// Set once the new version is in place: start it after this one has stopped.
+    relaunch: bool,
+}
+
+/// Asks for updates shortly after start, then every hour, and passes newer versions on.
+fn start_update_checks() -> mpsc::Receiver<update::Offer> {
+    let (tx, rx) = mpsc::channel();
+    thread::spawn(move || {
+        thread::sleep(std::time::Duration::from_secs(10));
+        loop {
+            match update::check() {
+                Ok(Some(offer)) => {
+                    if tx.send(offer).is_err() {
+                        return;
+                    }
+                }
+                Ok(None) => {}
+                Err(e) => eprintln!("update check: {e:#}"),
+            }
+            thread::sleep(update::CHECK_EVERY);
+        }
+    });
+    rx
 }
 
 pub fn run() -> Result<()> {
-    let Some(_instance) = settings::SingleInstance::acquire()? else {
+    let Some(instance) = settings::SingleInstance::acquire()? else {
         return Ok(());
     };
+    update::clean_up();
     let loaded = settings::load();
     let mut feedback = loaded.as_ref().err().map(|e| e.to_string());
     let profile = loaded.ok().flatten();
@@ -109,6 +148,13 @@ pub fn run() -> Result<()> {
         feedback,
         test: None,
         taskbar_created: 0,
+        updates: Updates {
+            offers: start_update_checks(),
+            offer: None,
+            downloading: None,
+            staged: None,
+            relaunch: false,
+        },
     });
     unsafe {
         let instance = GetModuleHandleW(null());
@@ -177,7 +223,12 @@ pub fn run() -> Result<()> {
         }
     }
     ui.controller.shutdown();
+    let relaunch = ui.updates.relaunch;
     ui.controller.wait();
+    if relaunch {
+        drop(instance); // let the new version take over this configuration
+        update::relaunch()?;
+    }
     Ok(())
 }
 
@@ -418,6 +469,7 @@ unsafe fn refresh(ui: &mut Ui) {
             }
         }
         let state = ui.controller.status();
+        poll_updates(ui, state.busy);
         let message = ui.feedback.clone().unwrap_or_else(|| {
             if state.message == "Not configured" {
                 String::new()
@@ -430,6 +482,121 @@ unsafe fn refresh(ui: &mut Ui) {
         if state.stopped {
             DestroyWindow(ui.hwnd);
         }
+    }
+}
+unsafe fn poll_updates(ui: &mut Ui, busy: bool) {
+    unsafe {
+        while let Ok(offer) = ui.updates.offers.try_recv() {
+            let known = ui.updates.offer.as_ref().map(|o| o.version.clone());
+            if known.is_none_or(|v| update::is_newer(&offer.version, &v)) {
+                balloon(
+                    ui,
+                    &format!("Update available: version {}", offer.version),
+                    "Click here to install it, or use the tray menu.",
+                );
+                ui.updates.offer = Some(offer);
+            }
+        }
+        let downloaded = ui
+            .updates
+            .downloading
+            .as_ref()
+            .and_then(|r| r.try_recv().ok());
+        if let Some(result) = downloaded {
+            ui.updates.downloading = None;
+            match result {
+                Ok(staged) => ui.updates.staged = Some(staged),
+                Err(e) => update_failed(ui, &e),
+            }
+        }
+        // Install between jobs, never during one.
+        if !busy
+            && !ui.updates.relaunch
+            && let Some(staged) = ui.updates.staged.take()
+        {
+            match update::install(&staged) {
+                Ok(()) => {
+                    ui.updates.relaunch = true;
+                    ui.controller.shutdown();
+                }
+                Err(e) => {
+                    let _ = std::fs::remove_file(&staged);
+                    update_failed(ui, &format!("{e:#}"));
+                }
+            }
+        }
+    }
+}
+unsafe fn update_failed(ui: &Ui, error: &str) {
+    unsafe {
+        MessageBoxW(
+            ui.hwnd,
+            wide(&format!(
+                "The update couldn't be installed: {error}\n\nThis version keeps running. You can download the new one from {}",
+                update::DOWNLOAD_PAGE
+            ))
+            .as_ptr(),
+            wide(settings::APP_NAME).as_ptr(),
+            MB_OK | MB_ICONWARNING | MB_SETFOREGROUND,
+        );
+    }
+}
+/// Asks before downloading the offered version; a yes downloads it in the background.
+unsafe fn offer_update(ui: &mut Ui) {
+    unsafe {
+        let Some(offer) = ui.updates.offer.clone() else {
+            return;
+        };
+        if ui.updates.downloading.is_some() || ui.updates.staged.is_some() || ui.updates.relaunch {
+            return;
+        }
+        let notes = if offer.notes.trim().is_empty() {
+            String::new()
+        } else {
+            format!("\n\n{}", offer.notes.trim())
+        };
+        let question = format!(
+            "Version {} is available (this is {}).{notes}\n\nInstall it now? The agent restarts by itself in a few seconds, after any job in progress. Your settings stay as they are.",
+            offer.version,
+            update::VERSION
+        );
+        let answer = MessageBoxW(
+            ui.hwnd,
+            wide(&question).as_ptr(),
+            wide(&format!("Update {}", settings::APP_NAME)).as_ptr(),
+            MB_YESNO | MB_ICONINFORMATION | MB_SETFOREGROUND,
+        );
+        if answer != IDYES {
+            return;
+        }
+        let (tx, rx) = mpsc::channel();
+        ui.updates.downloading = Some(rx);
+        thread::spawn(move || {
+            let _ = tx.send(update::download(&offer).map_err(|e| format!("{e:#}")));
+        });
+    }
+}
+/// Shows a tray notification; clicking it arrives as NIN_BALLOONUSERCLICK.
+unsafe fn balloon(ui: &Ui, title: &str, text: &str) {
+    unsafe {
+        let mut data: NOTIFYICONDATAW = mem::zeroed();
+        data.cbSize = mem::size_of::<NOTIFYICONDATAW>() as u32;
+        data.hWnd = ui.hwnd;
+        data.uID = 1;
+        data.uFlags = NIF_INFO;
+        data.dwInfoFlags = NIIF_INFO;
+        for (to, from) in data
+            .szInfoTitle
+            .iter_mut()
+            .take(63)
+            .zip(title.encode_utf16())
+        {
+            *to = from
+        }
+        for (to, from) in data.szInfo.iter_mut().take(255).zip(text.encode_utf16()) {
+            *to = from
+        }
+        Shell_NotifyIconW(NIM_MODIFY, &data);
     }
 }
 unsafe fn command(ui: &mut Ui, id: u32) {
@@ -484,6 +651,7 @@ unsafe fn command(ui: &mut Ui, id: u32) {
                 ui.controller.set_paused(!paused);
             }
             LOGS => show_logs(ui),
+            UPDATE => offer_update(ui),
             STARTUP => {
                 if let Some(mut p) = ui.profile.clone() {
                     p.start_at_signin = !p.start_at_signin;
@@ -537,6 +705,21 @@ unsafe fn menu(ui: &mut Ui) {
         let status = state.message.clone();
         AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, wide(&status).as_ptr());
         AppendMenuW(menu, MF_SEPARATOR, 0, null());
+        if let Some(offer) = &ui.updates.offer {
+            let pending = ui.updates.downloading.is_some() || ui.updates.staged.is_some();
+            let label = if pending {
+                format!("Updating to {}…", offer.version)
+            } else {
+                format!("Install update {}…", offer.version)
+            };
+            AppendMenuW(
+                menu,
+                MF_STRING | if pending { MF_GRAYED } else { 0 },
+                UPDATE as usize,
+                wide(&label).as_ptr(),
+            );
+            AppendMenuW(menu, MF_SEPARATOR, 0, null());
+        }
         AppendMenuW(
             menu,
             MF_STRING,
@@ -777,6 +960,8 @@ unsafe extern "system" fn wndproc(hwnd: HWND, message: u32, wp: WPARAM, lp: LPAR
             TRAY => {
                 if matches!(lp as u32, WM_RBUTTONUP | WM_LBUTTONUP | WM_CONTEXTMENU) {
                     menu(ui)
+                } else if lp as u32 == NIN_BALLOONUSERCLICK {
+                    offer_update(ui)
                 }
                 0
             }

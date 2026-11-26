@@ -16,6 +16,7 @@ mod programs;
 mod protocol;
 mod screen;
 mod settings;
+mod update;
 mod win;
 
 use std::fs;
@@ -30,6 +31,7 @@ use crate::protocol::Action;
 #[derive(Parser)]
 #[command(
     name = "SonicScrew-Local-Agent",
+    version,
     about = "Executes screen, mouse and keyboard actions on this machine"
 )]
 struct Cli {

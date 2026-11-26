@@ -42,14 +42,34 @@ and configuration changes wait for the current job to finish. Unsaved edits do n
 the running connection. Settings errors remain visible; a missing stored credential opens
 setup again so it can be repaired.
 
-The machine's name comes from its token: the tray shows "Connected as <name>". To move
-the agent to another machine, paste that machine's token. Regenerating or removing the
+The **Machine name** (default `demo-machine`) is how the SDKs pick this computer; it must
+be the name the token was made for, and only one computer at a time can be connected as a
+given name. The tray shows "Connected as <name>". To move the agent to another machine,
+enter that machine's name and token. Regenerating or removing the
 machine in the dashboard disconnects the agent. Network outages retry with backoff.
 Authentication errors wait for a settings change; a machine already connected from
 another agent is retried without replacing it.
 
 The executor runs in the signed-in user's desktop session. Start at sign-in is optional;
 it does not install a Windows service or enable unattended use of a locked desktop.
+
+## Updates
+
+The desktop app asks `https://app.sonicscrew.click/updates/local-agent` for the newest
+version shortly after it starts and then every hour; the request carries only this
+version number. When a newer one exists, a notification and a tray menu item offer it.
+Nothing is downloaded until you accept. Accepting downloads the new
+`SonicScrew-Local-Agent.exe`, checks it, waits for any job in progress, swaps it in place
+of the running file and restarts. Settings, the token and start at sign-in are kept.
+
+Every update must be signed with the project's release key; the public half is built
+into the agent (`src/update.rs`). A download that doesn't match the published checksum
+and signature is refused, so a compromised server or download link can't push code to
+agents. If the swap fails (for example, the exe is in a folder you can't write to), the
+current version keeps running and you're pointed at the releases page.
+
+`SONIC_UPDATE_URL` points the check elsewhere; `SONIC_UPDATE_URL=off` turns it off.
+The command-line `connect` mode never checks.
 
 ## Connected mode
 
@@ -171,6 +191,7 @@ screenshots never contain it and its animation does not disturb settle detection
 - `src/overlay.rs` the on-screen "agent at work" indicator
 - `src/executor.rs` runs one action and returns its result
 - `src/agent.rs` connected mode: WebSocket client, reconnects, screen thread
+- `src/update.rs` update check, signed download and in-place install
 - `src/main.rs` CLI
 
 ## Focusing windows
