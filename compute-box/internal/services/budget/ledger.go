@@ -56,8 +56,9 @@ func (l *Ledger) Record(ctx context.Context, userID int64, jobID, model string, 
 	return cost
 }
 
-// CapLimiter is the default Limiter: every user may spend up to the same cap, counted
-// conservatively (cache writes at their premium). A cap of 0 means no limit.
+// CapLimiter is the default Limiter: each user may spend up to their own cap if one is
+// set (store.SetUserBudget), else the server-wide cap, counted conservatively (cache
+// writes at their premium). A cap of 0 means no limit.
 type CapLimiter struct {
 	store    *store.Store
 	capUSD   float64
@@ -72,29 +73,35 @@ func NewCapLimiter(s *store.Store, capUSD float64, n *notify.Notifier) *CapLimit
 }
 
 func (c *CapLimiter) Budget(ctx context.Context, user ext.UserID) (float64, float64, error) {
+	capUSD := c.capUSD
+	if own, ok, err := c.store.UserBudget(ctx, int64(user)); err != nil {
+		return 0, capUSD, err
+	} else if ok {
+		capUSD = own
+	}
 	sp, err := c.store.UserSpend(ctx, int64(user))
 	if err != nil {
-		return 0, c.capUSD, err
+		return 0, capUSD, err
 	}
-	return max(sp.CostUSD, sp.CostConservativeUSD), c.capUSD, nil
+	return max(sp.CostUSD, sp.CostConservativeUSD), capUSD, nil
 }
 
 func (c *CapLimiter) Allow(ctx context.Context, user ext.UserID) error {
-	if c.capUSD <= 0 {
-		return nil
-	}
-	spent, _, err := c.Budget(ctx, user)
+	spent, capUSD, err := c.Budget(ctx, user)
 	if err != nil {
 		return err
 	}
-	if spent < c.capUSD {
+	if capUSD <= 0 || spent < capUSD {
+		c.mu.Lock()
+		delete(c.alerted, user) // raised cap: alert again next time it's reached
+		c.mu.Unlock()
 		return nil
 	}
-	c.alertOnce(user, spent)
-	return fmt.Errorf("model budget of $%.2f reached ($%.4f spent)", c.capUSD, spent)
+	c.alertOnce(user, spent, capUSD)
+	return fmt.Errorf("model budget of $%.2f reached ($%.4f spent)", capUSD, spent)
 }
 
-func (c *CapLimiter) alertOnce(user ext.UserID, spent float64) {
+func (c *CapLimiter) alertOnce(user ext.UserID, spent, capUSD float64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.alerted[user] {
@@ -102,7 +109,7 @@ func (c *CapLimiter) alertOnce(user ext.UserID, spent float64) {
 	}
 	c.alerted[user] = true
 	msg := fmt.Sprintf("User %d reached $%.4f of the $%.2f model budget. The compute-box now refuses their model calls.",
-		user, spent, c.capUSD)
+		user, spent, capUSD)
 	log.Print("budget: " + msg)
 	go c.notifier.Send(notify.High, "sonic-screwdriver: budget cap reached", msg)
 }
