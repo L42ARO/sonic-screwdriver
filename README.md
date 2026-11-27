@@ -183,9 +183,18 @@ data volume.
 
 ## Roadmap
 
-- A stop hotkey on the agent.
-- Recording and replaying click paths, to cut the time and cost of repeated operations.
-- A generated OpenAPI spec and a `sonic` CLI.
+- [x] Vision agent that drives any Windows program with screenshots, mouse and keyboard
+- [x] Typed operations from Python, TypeScript and Go SDKs
+- [x] Dashboard with jobs, step-by-step screenshots, playground and spend tracking
+- [x] Per-machine tokens, per-user spend caps and Docker self-hosting
+- [x] Hosted service at [app.sonicscrew.click](https://app.sonicscrew.click)
+- [x] Signed, in-place updates for the agent
+- [ ] A stop button or hotkey on the agent, so a person can halt a job at any moment
+- [ ] An MCP server, so developers can set up projects, machines and operations from their AI coding tools
+- [ ] Data migration: use the agent to extract records from old software that has no API
+      or export, to move them into a new system
+- [ ] Recording and replaying click paths, to cut the time and cost of repeated operations
+- [ ] A generated OpenAPI spec and a `sonic` CLI
 
 ## License
 
