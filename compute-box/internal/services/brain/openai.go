@@ -59,7 +59,7 @@ func (b *OpenAI) Run(ctx context.Context, t Task, env Env) (json.RawMessage, err
 	if first.Screenshot == nil {
 		return nil, fail("agent_gave_up", "the machine returned no screenshot: %s", first.Error)
 	}
-	clock := newScreenClock(time.Now(), first.Screenshot.PNGBase64)
+	clock := newJobClock(time.Now())
 
 	// Cached prefix first (developer message + tools), then the job, then an append-only
 	// conversation. Earlier items are never edited.
@@ -212,13 +212,9 @@ func textOutput(callID, text string) map[string]any {
 }
 
 // actionOutput reports an action's result with the screenshot taken after it, starting
-// with how much time has passed and whether the screen changed (see screenClock).
-func actionOutput(callID, tool string, res hub.Result, clock *screenClock) map[string]any {
-	full := ""
-	if res.Screenshot != nil && tool != "zoom" {
-		full = res.Screenshot.PNGBase64
-	}
-	timing := clock.observe(time.Now(), full)
+// with how much time has passed (see jobClock).
+func actionOutput(callID, tool string, res hub.Result, clock *jobClock) map[string]any {
+	timing := clock.observe(time.Now())
 	var text string
 	switch {
 	case !res.OK:
