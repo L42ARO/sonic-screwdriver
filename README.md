@@ -186,6 +186,7 @@ The docs site is in [`docs/`](docs) (Starlight): `cd docs; npm install; npm run 
 - [x] Signed, in-place updates for the agent
 - [ ] A stop button or hotkey on the agent, so a person can halt a job at any moment
 - [ ] The agent on macOS and Linux, not only Windows
+- [ ] More AI providers besides OpenAI, such as Claude and Kimi
 - [ ] An MCP server, so developers can set up projects, machines and operations from their AI coding tools
 - [ ] Data migration: use the agent to extract records from old software that has no API
       or export, to move them into a new system
