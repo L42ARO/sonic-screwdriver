@@ -25,7 +25,7 @@ export default defineConfig({
 				{ label: 'Writing operations', slug: 'operations' },
 				{ label: 'The agent', slug: 'agent' },
 				{ label: 'Self-hosting', slug: 'self-hosting' },
-				{ label: 'Security and FAQ', slug: 'security' },
+				{ label: 'Security', slug: 'security' },
 			],
 			plugins: [
 				starlightLlmsTxt({
@@ -39,7 +39,7 @@ export default defineConfig({
 						'- [Writing operations](https://sonicscrew.click/docs/operations.md): declaring operations, programs and machines, sync, errors, writing instructions',
 						'- [The agent](https://sonicscrew.click/docs/agent.md): installing and connecting the Windows agent, updates, connection problems',
 						'- [Self-hosting](https://sonicscrew.click/docs/self-hosting.md): Docker, settings, spend limits, HTTPS',
-						'- [Security and FAQ](https://sonicscrew.click/docs/security.md): what the agent can access, data, credentials, signed updates',
+						'- [Security](https://sonicscrew.click/docs/security.md): what the agent can access, data, credentials, signed updates',
 					].join('\n'),
 					optionalLinks: [
 						{ label: 'Source code', url: 'https://github.com/L42ARO/sonic-screwdriver', description: 'compute-box (Go), local-agent (Rust), SDKs and examples' },

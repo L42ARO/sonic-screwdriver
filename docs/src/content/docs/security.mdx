@@ -1,6 +1,6 @@
 ---
-title: Security and FAQ
-description: What the agent can access, where screenshots go, how credentials and updates are protected, spend limits, and common questions.
+title: Security
+description: What the agent can access, where screenshots go, how credentials and updates are protected, and spend limits.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -63,47 +63,3 @@ Each account has a limit on model spending:
 
 When it's reached, new jobs fail with `budget_exceeded`. The dashboard shows what you've spent
 and what each job cost.
-
-## FAQ
-
-**Does it work on macOS or Linux?**
-The agent runs on Windows only, for now; macOS and Linux support is on the
-[roadmap](https://github.com/L42ARO/sonic-screwdriver#roadmap). The server and your code can
-run anywhere.
-
-**Does it read the accessibility tree or the program's database?**
-No. It works only from screenshots, like a person. That's why it works on programs nothing
-else can automate.
-
-**How much does a job cost?**
-It depends on how many steps it takes. A simple lookup costs a few cents or less with the
-default model. Every job's exact cost is shown in the dashboard.
-
-**How long does a job take?**
-Usually seconds to a couple of minutes. Each step is a screenshot plus a model call, and slow
-programs add waiting time.
-
-**Can I use the computer while a job runs?**
-No. The agent moves the real cursor and types on the real keyboard. Wait for the overlay to
-disappear.
-
-**Can the computer be locked, or run without anyone signed in?**
-No. The agent needs an unlocked, signed-in desktop session.
-
-**Can I run jobs in parallel?**
-Yes, on different machines. Each machine runs one job at a time, and other jobs for it wait in
-a queue.
-
-**Which AI model does it use? Can I use another?**
-An OpenAI model (`gpt-6-luna` by default). Other providers aren't supported yet. The agent's
-actions are our own tools, so adding providers doesn't change the agent.
-
-**Is it open source?**
-Yes. The server, agent and examples are under AGPL-3.0, and the SDKs under MPL-2.0, so your
-application can use the SDKs under any license. Source:
-[github.com/L42ARO/sonic-screwdriver](https://github.com/L42ARO/sonic-screwdriver).
-
-**Something isn't working.**
-Open the job in the dashboard first: each step shows what the model saw and did. For agent
-connection problems, see [The agent](/docs/agent/#connection-problems). Otherwise,
-[open an issue](https://github.com/L42ARO/sonic-screwdriver/issues).
