@@ -5,6 +5,10 @@ use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadI
 use windows_sys::Win32::UI::HiDpi::{
     DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetProcessDpiAwarenessContext,
 };
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+    INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, SendInput, VIRTUAL_KEY, VK_F24,
+    VK_MENU,
+};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     BringWindowToTop, EnumWindows, GetForegroundWindow, GetWindowRect, GetWindowTextLengthW,
     GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindowVisible, SW_RESTORE,
@@ -100,6 +104,40 @@ pub fn focus_window(hwnd: isize) -> bool {
             AttachThreadInput(me, fg_thread, 0);
         }
         is_foreground(hwnd)
+    }
+}
+
+/// Lets this background process move another window to the front. Windows lifts its
+/// foreground lock when Alt is pressed, so press Alt, but with F24 (a key that does
+/// nothing) in between: a lone Alt tap would put the active window into keyboard menu
+/// mode, which stalls its timers until the next click or keypress.
+pub fn unlock_foreground() {
+    fn key(vk: VIRTUAL_KEY, up: bool) -> INPUT {
+        INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: vk,
+                    wScan: 0,
+                    dwFlags: if up { KEYEVENTF_KEYUP } else { 0 },
+                    time: 0,
+                    dwExtraInfo: 0,
+                },
+            },
+        }
+    }
+    let inputs = [
+        key(VK_MENU, false),
+        key(VK_F24, false),
+        key(VK_F24, true),
+        key(VK_MENU, true),
+    ];
+    unsafe {
+        SendInput(
+            inputs.len() as u32,
+            inputs.as_ptr(),
+            std::mem::size_of::<INPUT>() as i32,
+        );
     }
 }
 

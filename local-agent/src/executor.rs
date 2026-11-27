@@ -150,9 +150,12 @@ impl Executor {
 
     fn focus(&mut self, w: &win::TopWindow, r: &mut ActionResult) -> Result<()> {
         // Windows limits background processes from changing the foreground window.
-        // A modifier tap plus focus_window's thread trick usually works; if not, do
-        // what a person would: click the window's title bar.
-        self.input.key_chord("alt")?;
+        // An Alt press (see unlock_foreground) plus focus_window's thread trick usually
+        // works; if not, do what a person would: click the window's title bar. A window
+        // that is already in front (a program that just started usually is) is left alone.
+        if !win::is_foreground(w.hwnd) {
+            win::unlock_foreground();
+        }
         if !win::focus_window(w.hwnd) {
             let (cx, cy) = (w.x + w.w / 2, w.y + 12);
             self.input.click(cx, cy, MouseButton::Left, 1)?;
