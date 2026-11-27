@@ -191,6 +191,7 @@ The docs site is in [`docs/`](docs) (Starlight): `cd docs; npm install; npm run 
 - [ ] An MCP server, so developers can set up projects, machines and operations from their AI coding tools
 - [ ] Data migration: use the agent to extract records from old software that has no API
       or export, to move them into a new system
+- [ ] Batch operations: many reads or inserts in one job, instead of one job per record
 - [ ] Recording and replaying click paths, to cut the time and cost of repeated operations
 - [ ] A generated OpenAPI spec and a `sonic` CLI
 
