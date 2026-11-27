@@ -59,6 +59,7 @@ func (b *OpenAI) Run(ctx context.Context, t Task, env Env) (json.RawMessage, err
 	if first.Screenshot == nil {
 		return nil, fail("agent_gave_up", "the machine returned no screenshot: %s", first.Error)
 	}
+	clock := newScreenClock(time.Now(), first.Screenshot.PNGBase64)
 
 	// Cached prefix first (developer message + tools), then the job, then an append-only
 	// conversation. Earlier items are never edited.
@@ -175,7 +176,7 @@ func (b *OpenAI) Run(ctx context.Context, t Task, env Env) (json.RawMessage, err
 				if err != nil {
 					return nil, err
 				}
-				items = append(items, actionOutput(call.CallID, call.Name, res))
+				items = append(items, actionOutput(call.CallID, call.Name, res, clock))
 			}
 		}
 	}
@@ -210,8 +211,14 @@ func textOutput(callID, text string) map[string]any {
 	return map[string]any{"type": "function_call_output", "call_id": callID, "output": text}
 }
 
-// actionOutput reports an action's result with the screenshot taken after it.
-func actionOutput(callID, tool string, res hub.Result) map[string]any {
+// actionOutput reports an action's result with the screenshot taken after it, starting
+// with how much time has passed and whether the screen changed (see screenClock).
+func actionOutput(callID, tool string, res hub.Result, clock *screenClock) map[string]any {
+	full := ""
+	if res.Screenshot != nil && tool != "zoom" {
+		full = res.Screenshot.PNGBase64
+	}
+	timing := clock.observe(time.Now(), full)
 	var text string
 	switch {
 	case !res.OK:
@@ -232,6 +239,7 @@ func actionOutput(callID, tool string, res hub.Result) map[string]any {
 	if res.Unsettled {
 		text += " (The screen was still changing when this was taken; consider waiting.)"
 	}
+	text = timing + " " + text
 	if res.Screenshot == nil {
 		return textOutput(callID, text)
 	}
