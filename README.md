@@ -6,7 +6,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-22c55e?style=flat-square" alt="License: AGPL-3.0"></a>
   <a href="sdk"><img src="https://img.shields.io/badge/SDKs-MPL--2.0-22c55e?style=flat-square" alt="SDKs: MPL-2.0"></a>
   <img src="https://img.shields.io/badge/status-prototype-f59e0b?style=flat-square" alt="Status: prototype">
-  <a href="https://app.sonicscrew.click"><img src="https://img.shields.io/badge/hosted-app.sonicscrew.click-000?style=flat-square&labelColor=22c55e" alt="Hosted at app.sonicscrew.click"></a>
+  <a href="https://app.sonicscrew.click"><img src="https://img.shields.io/badge/hosted-app.sonicscrew.click-22c55e?style=flat-square" alt="Hosted at app.sonicscrew.click"></a>
   <a href="https://github.com/L42ARO/sonic-screwdriver/stargazers"><img src="https://img.shields.io/github/stars/L42ARO/sonic-screwdriver?style=flat-square&color=22c55e" alt="GitHub stars"></a>
   <a href="https://github.com/L42ARO/sonic-screwdriver/commits/main"><img src="https://img.shields.io/github/last-commit/L42ARO/sonic-screwdriver?style=flat-square" alt="Last commit"></a>
 </p>
