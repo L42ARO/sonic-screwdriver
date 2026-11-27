@@ -1,5 +1,5 @@
 <p align="center">
-  <img src=".github/banner/banner.png" alt="sonic-screwdriver: an API for software that has no API" width="100%">
+  <img src=".github/banner/sonic-screwdriver-banner.png" alt="sonic-screwdriver: an API for software that has no API" width="100%">
 </p>
 
 <p align="center">
