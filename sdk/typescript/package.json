@@ -1,8 +1,24 @@
 {
-  "name": "sonic-screwdriver",
+  "name": "sonicscrew",
   "version": "0.1.0",
   "license": "MPL-2.0",
   "description": "Typed TypeScript client for the sonic-screwdriver compute-box: turn a legacy program's tasks into async functions.",
+  "keywords": [
+    "automation",
+    "legacy software",
+    "vision agent",
+    "computer use",
+    "rpa",
+    "api"
+  ],
+  "homepage": "https://sonicscrew.click",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/L42ARO/sonic-screwdriver.git",
+    "directory": "sdk/typescript"
+  },
+  "bugs": "https://github.com/L42ARO/sonic-screwdriver/issues",
+  "author": "L42ARO",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,9 +28,12 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
     "zod": "^4.0.0"

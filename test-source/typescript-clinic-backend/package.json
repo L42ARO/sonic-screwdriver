@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "express": "^5.1.0",
-    "sonic-screwdriver": "file:../../sdk/typescript",
+    "sonicscrew": "file:../../sdk/typescript",
     "zod": "^4.0.0"
   },
   "devDependencies": {

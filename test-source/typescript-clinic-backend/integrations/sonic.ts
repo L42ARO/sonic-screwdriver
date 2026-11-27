@@ -5,7 +5,7 @@
  * into HTTP errors. Call it after your routes, since Express runs error handlers last.
  */
 import type { Express, NextFunction, Request, Response } from "express";
-import { SonicError } from "sonic-screwdriver";
+import { SonicError } from "sonicscrew";
 import { dentalClinic } from "../dentasoft.ts";
 
 const STATUS: Record<string, number> = {

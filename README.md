@@ -41,6 +41,10 @@ It doesn't use accessibility trees, database access or other shortcuts. That's t
 it's made for the 1998 records program, the vendor tool with no export, the app only a
 human at the front desk can drive.
 
+```sh
+pip install sonicscrew        # or: npm install sonicscrew zod  ·  go get github.com/L42ARO/sonic-screwdriver/sdk/go
+```
+
 ```python
 from pydantic import BaseModel
 from sonic_screwdriver import Sonic

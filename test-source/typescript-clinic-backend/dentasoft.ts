@@ -6,7 +6,7 @@
  * are the contract; the instructions tell the agent what to do.
  */
 import { z } from "zod";
-import { Sonic } from "sonic-screwdriver";
+import { Sonic } from "sonicscrew";
 
 // This app's project on the compute-box. SONIC_URL and SONIC_API_KEY set the connection.
 export const dentalClinic = new Sonic({

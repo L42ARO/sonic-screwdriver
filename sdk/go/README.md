@@ -1,5 +1,14 @@
 # sonic-screwdriver (Go SDK)
 
+```sh
+go get github.com/L42ARO/sonic-screwdriver/sdk/go@latest
+```
+
+Set `SONIC_URL` (default `https://app.sonicscrew.click`) and `SONIC_API_KEY` (from the
+dashboard's API keys page).
+
+> Prototype (0.x): the API may change between minor versions.
+
 ## Project programs and machine installations
 
 ```go

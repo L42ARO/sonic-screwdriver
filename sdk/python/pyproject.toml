@@ -1,14 +1,33 @@
 [project]
-name = "sonic-screwdriver"
+name = "sonicscrew"
 version = "0.1.0"
 description = "Typed Python client for the sonic-screwdriver compute-box: turn a legacy program's tasks into async functions."
 requires-python = ">=3.10"
-license = { text = "MPL-2.0" }
+license = "MPL-2.0"
+license-files = ["LICENSE"]
+readme = "README.md"
+authors = [{ name = "L42ARO" }]
+keywords = ["automation", "legacy software", "vision agent", "computer use", "rpa", "api"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Framework :: AsyncIO",
+    "Typing :: Typed",
+]
 dependencies = ["httpx>=0.27", "pydantic>=2.7"]
 
+[project.urls]
+Homepage = "https://sonicscrew.click"
+Source = "https://github.com/L42ARO/sonic-screwdriver/tree/main/sdk/python"
+Issues = "https://github.com/L42ARO/sonic-screwdriver/issues"
+
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+sonic_screwdriver = ["py.typed"]

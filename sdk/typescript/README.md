@@ -1,9 +1,18 @@
 # sonic-screwdriver (TypeScript SDK)
 
+```sh
+npm install sonicscrew zod
+```
+
+Set `SONIC_URL` (default `https://app.sonicscrew.click`) and `SONIC_API_KEY` (from the
+dashboard's API keys page).
+
+> Prototype (0.x): the API may change between minor versions.
+
 ## Project programs and machine installations
 
 ```ts
-import { Sonic, Machine } from "sonic-screwdriver";
+import { Sonic, Machine } from "sonicscrew";
 
 const frontDesk = new Machine({
   name: "dentist-front-desk",
@@ -48,7 +57,7 @@ Turn the tasks of a legacy program into typed async functions, with Zod schemas.
 
 ```ts
 import { z } from "zod";
-import { Sonic } from "sonic-screwdriver";
+import { Sonic } from "sonicscrew";
 
 const dentasoft = new Sonic({ project: "dental-clinic", machine: "dentist-front-desk" });
 
