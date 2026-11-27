@@ -1,0 +1,107 @@
+---
+title: Security and FAQ
+description: What the agent can access, where screenshots go, how credentials and updates are protected, spend limits, and common questions.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## What the agent can do
+
+The agent controls the mouse and keyboard of the signed-in Windows session, so during a job it
+can do **anything a person at that desk could do**. That's what makes it work on any program,
+and it's why you should set it up with care:
+
+- It only acts when the server sends it a job, and it shows the **AGENT AT WORK** overlay while it
+  does.
+- It can open only the programs registered for that machine, and only for projects that list
+  them. The model can't make it run arbitrary commands.
+- Run it on a **dedicated computer or Windows account** that has access only to what your
+  operations need. Don't run it on a machine holding data or accounts it shouldn't touch.
+- **Pause** or **Quit** from the tray at any time stops new jobs; a running job finishes first.
+  A stop button that halts a job immediately is on the roadmap.
+
+## Where your data goes
+
+- **Screenshots** of that computer's screen are sent to the server, stored with each job so you
+  can review it, and sent to OpenAI for the model to decide the next action.
+- **Inputs and outputs** of operations are stored with each job.
+- On the hosted service, that's our server at app.sonicscrew.click. Self-hosting keeps it all on
+  your own server (plus OpenAI, under your own account and its data terms).
+
+<Aside type="caution">
+If the screen shows personal or regulated data (patient records, for example), that data
+reaches the server and OpenAI. The hosted service is a prototype and isn't certified for
+regulated data such as HIPAA. For that, self-host and check your own obligations.
+</Aside>
+
+## Credentials
+
+| Credential | Who uses it | Protection |
+|---|---|---|
+| **API key** (`sonic_sk_…`) | Your backend | Shown once; stored only as a SHA-256 hash; revoke any time under **API keys**. |
+| **Machine token** (`sonic_mt_…`) | One agent | Shown once; hashed; works only for its own machine name. **Generate token** replaces it and disconnects the old agent. |
+| **Dashboard password** (self-hosted) | The owner | Salted PBKDF2-SHA256. Five wrong tries lock that address out for 15 minutes. |
+| **GitHub sign-in** (hosted) | Everyone on the hosted service | Only your public profile is read; the GitHub token is used once and not stored. |
+
+Each person's projects, machines, jobs, screenshots and spending are visible only to them.
+Use HTTPS for anything beyond a private network (see [Self-hosting](/docs/self-hosting/#https)).
+
+## Signed updates
+
+Agent updates are signed with the project's release key, and the agent has the matching public
+key built in. It refuses any download whose checksum or signature doesn't match. So even if the
+update server or a download link were compromised, it couldn't push code to your computers. The
+agent also asks before installing anything.
+
+## Spend limits
+
+Each account has a limit on model spending:
+
+- **Hosted:** new accounts get **$1** of model usage. If you need more, ask in a
+  [GitHub issue](https://github.com/L42ARO/sonic-screwdriver/issues).
+- **Self-hosted:** you set the limit with `SONIC_BUDGET_USD` (see [Self-hosting](/docs/self-hosting/#spend-limits)).
+
+When it's reached, new jobs fail with `budget_exceeded`. The dashboard shows what you've spent
+and what each job cost.
+
+## FAQ
+
+**Does it work on macOS or Linux?**
+The agent runs on Windows only, for now. The server and your code can run anywhere.
+
+**Does it read the accessibility tree or the program's database?**
+No. It works only from screenshots, like a person. That's why it works on programs nothing
+else can automate.
+
+**How much does a job cost?**
+It depends on how many steps it takes. A simple lookup costs a few cents or less with the
+default model. Every job's exact cost is shown in the dashboard.
+
+**How long does a job take?**
+Usually seconds to a couple of minutes. Each step is a screenshot plus a model call, and slow
+programs add waiting time.
+
+**Can I use the computer while a job runs?**
+No. The agent moves the real cursor and types on the real keyboard. Wait for the overlay to
+disappear.
+
+**Can the computer be locked, or run without anyone signed in?**
+No. The agent needs an unlocked, signed-in desktop session.
+
+**Can I run jobs in parallel?**
+Yes, on different machines. Each machine runs one job at a time, and other jobs for it wait in
+a queue.
+
+**Which AI model does it use? Can I use another?**
+An OpenAI model (`gpt-6-luna` by default). Other providers aren't supported yet. The agent's
+actions are our own tools, so adding providers doesn't change the agent.
+
+**Is it open source?**
+Yes. The server, agent and examples are under AGPL-3.0, and the SDKs under MPL-2.0, so your
+application can use the SDKs under any license. Source:
+[github.com/L42ARO/sonic-screwdriver](https://github.com/L42ARO/sonic-screwdriver).
+
+**Something isn't working.**
+Open the job in the dashboard first: each step shows what the model saw and did. For agent
+connection problems, see [The agent](/docs/agent/#connection-problems). Otherwise,
+[open an issue](https://github.com/L42ARO/sonic-screwdriver/issues).

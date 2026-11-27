@@ -1,0 +1,135 @@
+---
+title: Self-hosting
+description: Run your own compute-box with Docker, configure it, cap model spending, and put it behind HTTPS.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+The compute-box is the server: dashboard, API, agent connections and the model loop. You can run
+it yourself on any Linux server with Docker, or on your own computer for development. A
+self-hosted compute-box has **one owner**, who signs in with a password; your model calls go
+to your own OpenAI account.
+
+## Run it with Docker
+
+<Steps>
+
+1. On the server, get the code and go to the compute-box folder:
+
+   ```sh
+   git clone https://github.com/L42ARO/sonic-screwdriver.git
+   cd sonic-screwdriver/compute-box
+   ```
+
+2. Create the settings file:
+
+   ```sh
+   cp .env.example .env
+   ```
+
+   Set at least `OPENAI_KEY` and `SONIC_OWNER_PASSWORD` (10 characters or more). See
+   [Settings](#settings).
+
+3. Build and start it:
+
+   ```sh
+   docker compose up --build --detach --wait
+   ```
+
+4. Open `http://<server>:6080` and sign in with your password.
+
+</Steps>
+
+Then add a machine, generate its token and connect an agent to `http://<server>:6080` (or your
+HTTPS address, below). In your code, point the SDK at your server:
+
+```sh
+export SONIC_URL=https://sonic.example.com
+export SONIC_API_KEY=sonic_sk_...
+```
+
+**Data** (the SQLite database, screenshots and credentials) lives in the Docker volume `data`.
+It survives restarts and updates. **To update**, pull the latest code and run the same
+`docker compose up --build --detach --wait`; only the container is replaced.
+
+**Forgot the password?** Print a one-time sign-in link, valid once for 24 hours, then set a new
+password in the dashboard:
+
+```sh
+docker compose exec compute-box /app/compute-box login-link
+```
+
+<Aside>
+For development without Docker: `cd compute-box` and `go run .` (Go 1.26+). It listens on
+`http://localhost:8080`.
+</Aside>
+
+## Settings
+
+Set these in `.env` next to `compose.yaml`. Real environment variables take precedence.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `OPENAI_KEY` | | Your OpenAI API key. Never logged or sent to agents. |
+| `SONIC_OWNER_PASSWORD` | | Dashboard password, applied at startup while none is set. Change it later in **Settings**. |
+| `SONIC_BUDGET_USD` | `3.00` | Model spend limit in USD (`0` = no limit). See below. |
+| `SONIC_MODEL` | `gpt-6-luna` | The OpenAI model that drives the screen. |
+| `SONIC_REASONING` | model default | Reasoning effort sent to the model. |
+| `SONIC_PUBLIC_URL` | | How people reach the server, e.g. `https://sonic.example.com`. Used in sign-in links. |
+| `SONIC_PORT` | `6080` | Port published on the host. |
+| `SONIC_PUBLISH_ADDRESS` | `0.0.0.0` | Host address to publish on. Use `127.0.0.1` when a reverse proxy runs on the same server. |
+| `SONIC_JOB_TIMEOUT` | `10m` | A job running longer fails with `timeout`. |
+| `SONIC_MAX_STEPS` | `40` | Most screen actions one job may take. |
+| `SONIC_NTFY_TOPIC` | | [ntfy.sh](https://ntfy.sh) topic to alert when the spend limit is reached. |
+| `SONIC_BRAIN` | `openai` | `scripted` replays recorded actions instead of calling a model, for testing without an OpenAI key. |
+
+Restart after changing `.env`: `docker compose up --detach`.
+
+## Spend limits
+
+Every model call costs money on your OpenAI account, so the compute-box keeps a running total.
+Once the total reaches `SONIC_BUDGET_USD`, new jobs fail with `budget_exceeded` until you raise
+the limit. The dashboard shows what's been spent. Set it to `0` for no limit, but keep in mind
+that a misbehaving job can then spend without bound (each job is still capped by
+`SONIC_JOB_TIMEOUT` and `SONIC_MAX_STEPS`).
+
+## HTTPS
+
+Out of the box the server speaks plain HTTP on port 6080. On anything but a private network, put
+it behind an HTTPS reverse proxy; otherwise passwords, API keys, machine tokens and screenshots
+cross the network unencrypted, and the agent warns about it.
+
+With nginx and a certificate from [Let's Encrypt](https://letsencrypt.org) (certbot), the site
+needs WebSocket support for the agents and no buffering for streamed job progress:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name sonic.example.com;
+    # ssl_certificate and ssl_certificate_key: added by certbot
+
+    client_max_body_size 10m;
+
+    location / {
+        proxy_pass http://127.0.0.1:6080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;     # agents use a WebSocket
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 1h;
+        proxy_buffering off;                        # job progress is streamed
+    }
+}
+```
+
+Then set `SONIC_PUBLIC_URL=https://sonic.example.com` and `SONIC_PUBLISH_ADDRESS=127.0.0.1`
+in `.env`, so the server is only reachable through the proxy.
+
+## What it needs
+
+- Little memory and CPU: the heavy work happens at OpenAI. A small cloud server is enough.
+- Disk for screenshots: each job stores one image per step.
+- Outbound HTTPS to `api.openai.com`. Agents connect *to* the server, so it never needs to reach
+  the Windows computers.

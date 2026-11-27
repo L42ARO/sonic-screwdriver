@@ -23,9 +23,9 @@
 </p>
 
 <p align="center">
+  <a href="https://sonicscrew.click/docs/"><b>Docs</b></a> ·
   <a href="https://app.sonicscrew.click"><b>Try it hosted</b></a> ·
-  <a href="#quick-start">Quick start</a> ·
-  <a href="#run-everything-yourself">Self-host</a> ·
+  <a href="https://sonicscrew.click/docs/self-hosting/">Self-host</a> ·
   <a href="sdk">SDKs</a> ·
   <a href="#license">License</a>
 </p>
@@ -49,7 +49,7 @@ pip install sonicscrew        # or: npm install sonicscrew zod  ·  go get githu
 from pydantic import BaseModel
 from sonic_screwdriver import Sonic
 
-clinic = Sonic(project="demo-project", machine="demo-machine")
+clinic = Sonic(project="dental-clinic", machine="front-desk")
 
 class Patient(BaseModel):
     found: bool
@@ -57,16 +57,19 @@ class Patient(BaseModel):
     phone: str | None = None
 
 @clinic.operation
-async def look_up_patient(patient_id: str) -> Patient:
+async def lookup_patient(patient_id: str) -> Patient:
     """Find a patient in DentaSoft by Patient ID and read their record."""
 
-await clinic.sync()                          # once, at startup
-patient = await look_up_patient("P-1004")    # an agent does it on the clinic's PC
+await clinic.sync()                         # once, at startup
+patient = await lookup_patient("P-1004")    # an agent does it on the clinic's PC
 ```
 
 The signature is the input and the return type is the output. The docstring tells the
 agent what to do. The function body never runs. The same works in
 [TypeScript](sdk/typescript) (Zod schemas) and [Go](sdk/go) (structs).
+
+**[Read the docs →](https://sonicscrew.click/docs/)** Getting started, writing operations,
+the agent, self-hosting, and security.
 
 ## How it works
 
@@ -111,56 +114,44 @@ agent what to do. The function body never runs. The same works in
 
 ## Quick start
 
-The fastest path is the hosted service at **[app.sonicscrew.click](https://app.sonicscrew.click)**:
+1. Sign in at **[app.sonicscrew.click](https://app.sonicscrew.click)** with GitHub and
+   follow the checklist on the Overview page.
+2. Install the **SonicScrew Local Agent** from the
+   [latest release](https://github.com/L42ARO/sonic-screwdriver/releases/latest) on a
+   Windows computer.
+3. Run the demo in the **Playground**, then call it from your code.
 
-1. Sign in with GitHub and follow the checklist on the Overview page.
-2. Download the **SonicScrew Local Agent** from the
-   [latest release](https://github.com/L42ARO/sonic-screwdriver/releases/latest). Run it,
-   keep the machine name `demo-machine`, and paste the machine token from the dashboard.
-3. Add the demo project from the checklist and run an operation from the
-   **Playground**. You can also create an API key and call it from one of the
-   [sample backends](test-source).
+The [Getting started guide](https://sonicscrew.click/docs/) walks through each step, and
+[Self-hosting](https://sonicscrew.click/docs/self-hosting/) covers running your own server
+with Docker.
 
-## Run everything yourself
+## Develop from source
 
-Requirements: Windows, Go, Rust and Python 3, plus an OpenAI key.
+To work on sonic-screwdriver itself you need Windows, Go, Rust and Python 3, plus an
+OpenAI key (or `SONIC_BRAIN=scripted` to test without a model).
 
 ```powershell
 # 1. compute-box. In compute-box/.env set OPENAI_KEY=... and SONIC_OWNER_PASSWORD=...
-cd compute-box; go run .
-# Open http://localhost:8080 and sign in. Add the machine "demo-machine" (copy its token)
-# and create an API key (copy it). Each is shown only once.
+cd compute-box; go run .              # http://localhost:8080
 
-# 2. The agent, on the Windows machine
-cd local-agent; cargo build --release
-.\target\release\SonicScrew-Local-Agent.exe
-# In setup: URL http://localhost:8080, machine name demo-machine, and the machine token.
+# 2. The agent: URL http://localhost:8080, machine name demo-machine, and its token
+cd local-agent; cargo build --release; .\target\release\SonicScrew-Local-Agent.exe
 
-# 3. A sample backend. On startup it registers the project, the machine and DentaSoft.
+# 3. A sample backend, which registers the project, the machine and DentaSoft
 cd test-source\python-clinic-backend
-$env:SONIC_URL = "http://localhost:8080"
-$env:SONIC_API_KEY = "sonic_sk_..."
+$env:SONIC_URL = "http://localhost:8080"; $env:SONIC_API_KEY = "sonic_sk_..."
 $env:DENTASOFT_SCRIPT = "$PWD\..\..\test-target\dentasoft\dentasoft.py"
 .\.venv\Scripts\uvicorn main:app
-curl http://localhost:8000/patients/P-1004
 ```
 
-- Don't touch the mouse or keyboard while the overlay is showing.
-- To test the plumbing without a model, start the compute-box with `SONIC_BRAIN=scripted`.
-- DentaSoft's login is `drsmith` / `molar123`.
-- If you forget the dashboard password, `go run . login-link` prints a one-time sign-in
-  link.
-
-**On a server:** the compute-box ships as a Docker image. Run `docker compose up` in
-`compute-box/`. [The compute-box README](compute-box/README.md#docker-self-hosting) covers
-sign-in, tokens, settings (including `SONIC_BUDGET_USD`, the per-user spend cap) and the
-data volume.
+The docs site is in [`docs/`](docs) (Starlight): `cd docs; npm install; npm run dev`.
 
 <details>
 <summary><b>Where everything is</b></summary>
 
 | Path | What it is |
 |---|---|
+| `docs/` | The documentation site at sonicscrew.click/docs (Starlight, Markdown pages) |
 | `compute-box/` | Go server: caller API, agent hub, job queues, OpenAI brain, budgets, dashboard |
 | `compute-box/README.md` | Settings, API, how a job runs, caching and cost, Docker |
 | `local-agent/` | Rust agent: screen, mouse and keyboard; tray app; updates |

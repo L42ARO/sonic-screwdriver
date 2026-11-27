@@ -1,0 +1,253 @@
+---
+title: Writing operations
+description: Declare operations in Python, TypeScript or Go, register your programs and machines, and write instructions the agent follows reliably.
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+An operation is one task on a program, declared in your own code:
+
+- a **name**, such as `update_balance`;
+- a **description**: one line saying what it does;
+- **instructions**: how a person would do it in the program, step by step;
+- an **input** type and an **output** type. The input is checked before the job starts, and
+  the result must match the output type, or the job fails with `output_invalid`.
+
+## Declare a project and its operations
+
+<Tabs syncKey="lang">
+<TabItem label="Python">
+In Python, the function signature is the input, the return type is the output and the
+docstring holds the description (first paragraph) and the instructions (the rest). The body
+never runs.
+
+```python
+from typing import Annotated
+from pydantic import BaseModel, Field
+from sonic_screwdriver import Sonic, Program
+
+clinic = Sonic(
+    project="dental-clinic",
+    machine="front-desk",
+    programs={"dentasoft": Program(description="Patient records, appointments and balances.")},
+    context="Use DentaSoft. If its login box shows, log in as drsmith / molar123.",
+)
+
+class BalanceChange(BaseModel):
+    previous_balance: float
+    new_balance: float
+
+@clinic.operation
+async def update_balance(patient_id: str, balance: Annotated[float, Field(ge=0)]) -> BalanceChange:
+    """Set a patient's Balance Due.
+
+    Find the patient by Patient ID and open their record. Note the current Balance Due.
+    Click Edit, replace Balance Due with the new amount, click Save and answer Yes.
+    Then re-read Balance Due and only report success if it shows the new amount.
+    """
+
+await clinic.sync()                                   # once, at startup
+change = await update_balance("P-1004", balance=0)    # -> BalanceChange
+```
+</TabItem>
+<TabItem label="TypeScript">
+In TypeScript, the input and output are Zod schemas.
+
+```ts
+import { z } from "zod";
+import { Sonic } from "sonicscrew";
+
+const clinic = new Sonic({
+  project: "dental-clinic",
+  machine: "front-desk",
+  programs: { dentasoft: { description: "Patient records, appointments and balances." } },
+  context: "Use DentaSoft. If its login box shows, log in as drsmith / molar123.",
+});
+
+export const updateBalance = clinic.operation({
+  name: "update_balance",
+  description: "Set a patient's Balance Due.",
+  instructions: `
+    Find the patient by Patient ID and open their record. Note the current Balance Due.
+    Click Edit, replace Balance Due with the new amount, click Save and answer Yes.
+    Then re-read Balance Due and only report success if it shows the new amount.`,
+  input: z.object({ patientId: z.string(), balance: z.number().min(0) }),
+  output: z.object({ previousBalance: z.number(), newBalance: z.number() }),
+});
+
+await clinic.sync();                                                     // once, at startup
+const change = await updateBalance({ patientId: "P-1004", balance: 0 });
+```
+</TabItem>
+<TabItem label="Go">
+In Go, the input and output are structs. Their `json` and `jsonschema` tags become the schemas.
+
+```go
+var Clinic = sonic.NewProject("dental-clinic",
+    sonic.WithMachine("front-desk"),
+    sonic.WithPrograms(map[string]sonic.Program{
+        "dentasoft": {Description: "Patient records, appointments and balances."},
+    }),
+    sonic.WithContext("Use DentaSoft. If its login box shows, log in as drsmith / molar123."),
+)
+
+type UpdateBalanceInput struct {
+    PatientID string  `json:"patient_id"`
+    Balance   float64 `json:"balance" jsonschema:"minimum=0"`
+}
+
+type BalanceChange struct {
+    PreviousBalance float64 `json:"previous_balance"`
+    NewBalance      float64 `json:"new_balance"`
+}
+
+var UpdateBalance = sonic.Define[UpdateBalanceInput, BalanceChange](Clinic, sonic.Spec{
+    Name:        "update_balance",
+    Description: "Set a patient's Balance Due.",
+    Instructions: `
+        Find the patient by Patient ID and open their record. Note the current Balance Due.
+        Click Edit, replace Balance Due with the new amount, click Save and answer Yes.
+        Then re-read Balance Due and only report success if it shows the new amount.`,
+})
+
+// once, at startup
+if err := Clinic.Sync(ctx); err != nil { return err }
+change, err := UpdateBalance.Run(ctx, UpdateBalanceInput{PatientID: "P-1004"})
+```
+</TabItem>
+</Tabs>
+
+- `context` is shared guidance added to every operation in the project: which program to use,
+  how to log in, quirks of the app.
+- `programs` lists the programs this project's operations may open, with a description of
+  each. Where each program is installed is configured per machine (next section).
+
+<Aside type="caution" title="sync() replaces the whole project">
+`sync()` makes the project's operations on the server exactly match the ones declared in your
+code, so operations missing from your code are removed. Declare all of a project's operations
+in one place, and call `sync()` once at startup.
+</Aside>
+
+## Register a machine's programs
+
+Tell the server where each program is installed on a machine. The agent uses this to open the
+program when an operation needs it. Paths are on that Windows computer, not where your code runs.
+
+<Tabs syncKey="lang">
+<TabItem label="Python">
+```python
+from sonic_screwdriver import Machine, InstalledProgram
+
+front_desk = Machine("front-desk", programs={
+    "dentasoft": InstalledProgram(
+        executable=r"C:\Program Files\DentaSoft\DentaSoft.exe",
+        working_directory=r"C:\Program Files\DentaSoft",
+        window_title_contains="DentaSoft",
+    ),
+})
+await front_desk.sync()
+```
+</TabItem>
+<TabItem label="TypeScript">
+```ts
+import { Machine } from "sonicscrew";
+
+const frontDesk = new Machine({
+  name: "front-desk",
+  programs: {
+    dentasoft: {
+      executable: String.raw`C:\Program Files\DentaSoft\DentaSoft.exe`,
+      working_directory: String.raw`C:\Program Files\DentaSoft`,
+      window_title_contains: "DentaSoft",
+    },
+  },
+});
+await frontDesk.sync();
+```
+</TabItem>
+<TabItem label="Go">
+```go
+frontDesk := sonic.NewMachine("front-desk", map[string]sonic.InstalledProgram{
+    "dentasoft": {
+        Executable:          `C:\Program Files\DentaSoft\DentaSoft.exe`,
+        WorkingDirectory:    `C:\Program Files\DentaSoft`,
+        WindowTitleContains: "DentaSoft",
+    },
+})
+if err := frontDesk.Sync(ctx); err != nil { return err }
+```
+</TabItem>
+</Tabs>
+
+| Field | Meaning |
+|---|---|
+| `executable` | Absolute path of the program on that machine. May start with an environment variable, such as `%LOCALAPPDATA%\App\app.exe`; the agent expands it. |
+| `args` | Command-line arguments, as a list. |
+| `working_directory` | Optional folder to start the program in. |
+| `window_title_contains` | Text in the program's window title, used to find its window. |
+| `startup_timeout_ms` | How long to wait for the window after launching (default 30 s, at most 120 s). |
+
+A machine's `sync()` replaces all of that machine's programs, so if several projects share a
+machine, register its programs in one place. The agent doesn't open anything at sync time:
+during a job, the model decides when to open or switch to a program.
+
+## Running operations
+
+Calls wait until the job ends and return the typed result. Per-call options:
+
+| Option | Python | TypeScript | Go |
+|---|---|---|---|
+| Run on another machine | `with_options(machine="…")` | `{ machine: "…" }` | `sonic.OnMachine("…")` |
+| Avoid running twice on retries | `with_options(idempotency_key="…")` | `{ idempotencyKey: "…" }` | `sonic.IdempotencyKey("…")` |
+| Progress updates | `with_options(on_step=fn)` | `{ onStep: fn }` | `sonic.OnStep(fn)` |
+
+In Python: `await update_balance.with_options(idempotency_key="inv-5521")("P-1004", balance=0)`.
+In TypeScript the options are a second argument; in Go they follow the input in `Run`.
+
+Each machine runs one job at a time; other jobs for it wait in a queue. A job that would take
+more than 10 minutes or 40 screen actions fails with `timeout` (self-hosted servers can change
+both limits).
+
+### Errors
+
+Failures raise `SonicError` (Python, TypeScript) or return `*sonic.Error` (Go) with a stable
+`code` you can branch on:
+
+| Code | Meaning | What to do |
+|---|---|---|
+| `invalid_input` | The input doesn't match the operation's input type. | Fix the call. |
+| `not_found` | Unknown project or operation (or the agent reported the record doesn't exist). | Call `sync()`; check names. |
+| `machine_offline` | No agent is connected as that machine. | Start the agent; check its name. |
+| `agent_gave_up` | The model couldn't complete the task and said why. | Read the job in the dashboard; improve the instructions. |
+| `output_invalid` | The model's answer didn't match the output type. | Loosen the type or make the instructions clearer about what to return. |
+| `machine_disconnected` | The agent dropped during the job. | Retry once the machine is back. |
+| `timeout` | The job ran too long or took too many steps. | Split the task or simplify the instructions. |
+| `budget_exceeded` | Your model spend limit is reached. | See [spend limits](/docs/security/#spend-limits). |
+| `unreachable` | The SDK couldn't reach the server. | Check `SONIC_URL` and the network. |
+
+<Aside type="caution">
+A job that fails halfway through an operation that **changes** data (such as `update_balance`)
+may have changed some of it. Before retrying, read the current state, or use an idempotency key.
+</Aside>
+
+## Writing good instructions
+
+The model only knows what's on the screen and what you tell it. Write instructions the way you'd
+brief a temp worker who has never seen the program:
+
+- **Name things as they appear on screen.** "Type the ID into the *Patient ID* box in the *Find
+  Patient* panel and press *Find*", not "search for the patient".
+- **Give the order of steps**, including confirmation dialogs ("click Save, then answer Yes").
+- **Say how to verify.** "Re-read Balance Due and only report success if it shows the new
+  amount" catches silent failures.
+- **Say what to do when something's missing.** "If no records are found, return `found=false`."
+- **Put app-wide quirks in `context`**, not in every operation: how to log in, that the app is
+  slow ("wait for *Please wait…* to clear"), which keyboard shortcuts don't work.
+- **Describe output fields precisely.** Formats ("MM/DD/YYYY as shown") and units ("in
+  dollars") go in the field descriptions (`Field(description=…)`, `.describe(…)`,
+  `jsonschema_description`).
+- **Keep operations small.** "Look up a patient" and "update a balance" work better as two
+  operations than one that does both.
+
+When a job goes wrong, open it in the dashboard. Each step shows the screenshot the model saw
+and the action it chose, which usually makes it obvious which instruction was unclear.

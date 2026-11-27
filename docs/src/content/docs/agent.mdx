@@ -1,0 +1,112 @@
+---
+title: The agent
+description: Install the SonicScrew Local Agent on a Windows PC, connect it as a machine, and keep it running and up to date.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+The **SonicScrew Local Agent** is a small Windows tray app. It's the hands and eyes of
+sonic-screwdriver: it takes screenshots and clicks and types exactly as the server tells it.
+It has no AI of its own and opens no ports. It connects out to the server over a WebSocket.
+
+## Install and connect
+
+<Steps>
+
+1. **Create the machine.** In the dashboard, go to **Machines**, add a machine (for example
+   `front-desk`) and copy its token. The token is shown only once; you can generate a new one later.
+
+2. **Download the agent** on the Windows computer from the
+   [latest release](https://github.com/L42ARO/sonic-screwdriver/releases/latest) and unzip it
+   anywhere, such as your Documents folder.
+
+3. **Run `SonicScrew-Local-Agent.exe`.** If Windows shows "Windows protected your PC", click
+   **More info**, then **Run anyway**. The agent isn't code-signed yet, so Windows doesn't
+   recognize it.
+
+4. **Fill in the setup window:**
+   - **Server URL:** `https://app.sonicscrew.click` (the default), or your own server.
+   - **Machine name:** exactly the name from step 1. Your code uses this name to pick the machine.
+   - **Machine token:** the token from step 1.
+   - **Start at sign-in:** check it if the agent should start whenever you sign in to Windows.
+
+   Click **Test** to check the token without taking over the computer, then **Connect**.
+
+</Steps>
+
+The setup window closes and the agent lives in the tray. Its tooltip and menu show the status,
+for example "Connected as front-desk".
+
+The settings are saved per Windows user in `%LOCALAPPDATA%\SonicScrewdriver\config.json`. The
+token itself is stored in Windows Credential Manager, not in that file.
+
+## While a job runs
+
+A green **AGENT AT WORK** tab and glow appear on screen. The agent is moving the real mouse and
+typing on the real keyboard, so **don't use the computer until the overlay disappears**, or
+you'll fight over the cursor. The overlay is invisible to the agent's own screenshots.
+
+The agent works in the signed-in user's desktop session. It needs that session unlocked: it
+can't drive a locked screen, and it doesn't run as a Windows service.
+
+## The tray menu
+
+| Item | What it does |
+|---|---|
+| **Settings…** | Change the server URL, machine name or token. |
+| **Pause** / **Resume** | Stop taking new jobs. If a job is running, it finishes first. |
+| **View connection logs…** | Recent connection events, for troubleshooting. |
+| **Start at sign-in** | Start the agent when you sign in to Windows. |
+| **Install update…** | Appears when a newer version is available (see below). |
+| **Quit** | Close the agent, after any job in progress. |
+
+## Updates
+
+The agent checks for a newer version when it starts and then every hour. The check sends only
+its version number. When there's an update, a notification and a tray menu item offer it.
+
+Nothing is installed until you accept. Then the agent:
+1. downloads the new version and verifies it (see [signed updates](/docs/security/#signed-updates));
+2. waits until no job is running;
+3. replaces its program file and restarts. Settings and the token stay as they are.
+
+If anything fails, the current version keeps running. To turn off the check, set the
+environment variable `SONIC_UPDATE_URL=off`.
+
+## Machine names and tokens
+
+- Each token belongs to **one machine name**. If the name in the agent doesn't match the
+  token's, the server refuses the connection and says which name the token is for.
+- **One computer per name.** If another computer is already connected as that name, the new
+  one is refused until the first disconnects.
+- **Generate token** in the dashboard replaces the machine's token. The old token stops working
+  immediately and its agent is disconnected. Use this if a token leaks or a computer is retired.
+
+## Connection problems
+
+| What you see | Cause and fix |
+|---|---|
+| "Machine token rejected" | It was mistyped, regenerated, or the machine was removed. Generate a new token in the dashboard. |
+| "This token is for the machine X" | The machine name doesn't match the token. Set Machine name to X. |
+| "Another computer is already connected with this machine name" | Quit the agent on the other computer, or give this one its own name and token. |
+| "Unencrypted" warning in setup | The URL is plain `http://` to another computer, so the token and screenshots travel unencrypted. Use `https://`. |
+| Keeps reconnecting | Network trouble or the server is down. It retries on its own; **View connection logs…** shows why. |
+
+Your code gets `machine_offline` when no agent is connected as the machine it asked for.
+
+## Command line
+
+The same program also has a command-line mode, mostly for servers and testing:
+
+```powershell
+SonicScrew-Local-Agent.exe connect --url https://app.sonicscrew.click --machine front-desk --token sonic_mt_...
+```
+
+`--url`, `--machine` and `--token` can also come from `SONIC_AGENT_URL`, `SONIC_MACHINE` and
+`SONIC_MACHINE_TOKEN`, or from the settings saved by the desktop app. Command-line mode doesn't
+check for updates.
+
+<Aside>
+Agent source code and the full list of actions it can perform:
+[local-agent on GitHub](https://github.com/L42ARO/sonic-screwdriver/tree/main/local-agent).
+</Aside>

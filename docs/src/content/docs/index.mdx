@@ -1,0 +1,217 @@
+---
+title: Getting started
+description: What sonic-screwdriver is, how it works, and how to run your first operation in about 10 minutes.
+---
+
+import { Tabs, TabItem, Steps, Aside } from '@astrojs/starlight/components';
+
+**sonic-screwdriver turns a desktop program that has no API into one you can call from
+code.** You describe a task as a typed function, such as "look up patient P-1004". An AI
+agent carries it out on the real program the way a person would: it looks at the screen
+and uses the mouse and keyboard.
+
+<Aside type="caution" title="Prototype">
+sonic-screwdriver is at version 0.x. It works end to end, but expect rough edges and
+breaking changes between minor versions.
+</Aside>
+
+## When to use it
+
+**Good fit:** Windows programs with no API, export or database you can reach: old records
+systems, vendor tools, line-of-business apps that only a person at a desk can drive.
+
+**Not a good fit:**
+- Software that already has an API or a database you can query. Use that instead; it's faster
+  and cheaper.
+- Work that has to happen in milliseconds. Each step is a screenshot and a model call, so an
+  operation takes seconds to minutes.
+- Thousands of runs per hour on one computer. Each machine runs one job at a time.
+
+## How it works
+
+```
+ your backend (Python / TypeScript / Go SDK)
+        │  HTTPS: run an operation, progress streamed back
+        ▼
+ compute-box (server) ─────── OpenAI model: decides every click
+        │  WebSocket, opened by the agent (no inbound ports needed)
+        ▼
+ SonicScrew Local Agent on the Windows PC
+        │  screenshots in, mouse and keyboard out
+        ▼
+ the program
+```
+
+1. Your code calls an operation, such as `lookup_patient("P-1004")`.
+2. The **compute-box** (the server) starts a job. It sends the model a screenshot of the PC,
+   the operation's instructions and its input.
+3. The model picks one action (click here, type this, press Enter), the **agent** performs it
+   on the PC, and a new screenshot comes back. This repeats until the task is done.
+4. The model returns a result that must match the operation's output type, and your code gets
+   it back as typed data.
+
+You can use the hosted compute-box at [app.sonicscrew.click](https://app.sonicscrew.click) or
+[run your own](/docs/self-hosting/).
+
+## Concepts
+
+| Term | What it is |
+|---|---|
+| **Operation** | A task with a typed input, a typed output and plain-language instructions, such as `lookup_patient`. You declare it in your code. |
+| **Project** | A group of operations for one app or use case, such as `dental-clinic`. It also lists which programs the operations may use. |
+| **Machine** | A Windows computer running the agent, identified by a name you choose, such as `front-desk`. Your code picks a machine by name. |
+| **Program** | A desktop app the agent may open. The *project* describes it (what it's for); each *machine* says where it's installed (the `.exe` path). |
+| **Job** | One run of an operation on one machine. Every job keeps its steps, screenshots, cost and result, viewable in the dashboard. |
+
+Two kinds of credentials connect the pieces:
+
+- An **API key** (`sonic_sk_…`) lets your backend call operations. Your code reads it from
+  `SONIC_API_KEY`.
+- A **machine token** (`sonic_mt_…`) lets one agent connect as one machine. You enter it in the
+  agent once. Revoking it disconnects only that machine.
+
+## Quickstart
+
+This runs **DentaSoft**, a deliberately clunky 1998-style dental records app, from your own
+code. You need a Windows computer for the agent; your code can run anywhere.
+
+<Steps>
+
+1. **Sign in** at [app.sonicscrew.click](https://app.sonicscrew.click) with GitHub.
+
+2. **Add the demo project.** On the Overview page, click **Add demo project**. It creates the
+   project `demo-project` with DentaSoft's operations, and a machine called `demo-machine`.
+
+3. **Install the agent** on the Windows computer.
+   - In the checklist, click **Download for Windows** and unzip it. DentaSoft is included in the
+     `demo` folder.
+   - Click **Generate token** and copy the token. It's shown only once.
+   - Run `SonicScrew-Local-Agent.exe`. Keep the machine name `demo-machine` and the URL
+     `https://app.sonicscrew.click`, paste the token and click **Connect**.
+
+   The tray icon shows "Connected as demo-machine". See [The agent](/docs/agent/) for details.
+
+4. **Run your first job.** Open the **Playground**, choose `lookup_patient`, keep the input
+   `{"patient_id": "P-1004"}` and click **Run**. The agent opens DentaSoft, logs in, finds the
+   patient and reads the record. You can watch each step and screenshot live.
+
+   <Aside>Don't use the mouse or keyboard on that computer while the agent's green "agent at work"
+   overlay is showing.</Aside>
+
+5. **Call it from your code.** Create an API key under **API keys** and set it as an environment
+   variable:
+
+   ```sh
+   export SONIC_API_KEY=sonic_sk_...      # PowerShell: $env:SONIC_API_KEY = "sonic_sk_..."
+   ```
+
+   Then install the SDK and run this:
+
+   <Tabs syncKey="lang">
+   <TabItem label="Python">
+   ```sh
+   pip install sonicscrew
+   ```
+   ```python
+   import asyncio
+   from pydantic import BaseModel
+   from sonic_screwdriver import Sonic
+
+   clinic = Sonic(project="demo-project", machine="demo-machine")
+
+   class Patient(BaseModel):
+       found: bool
+       first_name: str | None = None
+       last_name: str | None = None
+       phone: str | None = None
+
+   @clinic.operation
+   async def lookup_patient(patient_id: str) -> Patient:
+       """Look up a patient's record by patient ID."""
+
+   async def main():
+       print(await lookup_patient("P-1004"))
+       await clinic.aclose()
+
+   asyncio.run(main())
+   ```
+   </TabItem>
+   <TabItem label="TypeScript">
+   ```sh
+   npm install sonicscrew zod
+   ```
+   ```ts
+   import { z } from "zod";
+   import { Sonic } from "sonicscrew";
+
+   const clinic = new Sonic({ project: "demo-project", machine: "demo-machine" });
+
+   const lookupPatient = clinic.operation({
+     name: "lookup_patient",
+     description: "Look up a patient's record by patient ID.",
+     instructions: "",
+     input: z.object({ patient_id: z.string() }),
+     output: z.object({
+       found: z.boolean(),
+       first_name: z.string().nullish(),
+       last_name: z.string().nullish(),
+       phone: z.string().nullish(),
+     }),
+   });
+
+   console.log(await lookupPatient({ patient_id: "P-1004" }));
+   ```
+   </TabItem>
+   <TabItem label="Go">
+   ```sh
+   go get github.com/L42ARO/sonic-screwdriver/sdk/go@latest
+   ```
+   ```go
+   package main
+
+   import (
+       "context"
+       "fmt"
+       "log"
+
+       sonic "github.com/L42ARO/sonic-screwdriver/sdk/go"
+   )
+
+   type LookupInput struct {
+       PatientID string `json:"patient_id"`
+   }
+
+   type Patient struct {
+       Found     bool   `json:"found"`
+       FirstName string `json:"first_name,omitempty"`
+       LastName  string `json:"last_name,omitempty"`
+       Phone     string `json:"phone,omitempty"`
+   }
+
+   var clinic = sonic.NewProject("demo-project", sonic.WithMachine("demo-machine"))
+
+   var LookupPatient = sonic.Define[LookupInput, Patient](clinic, sonic.Spec{
+       Name:        "lookup_patient",
+       Description: "Look up a patient's record by patient ID.",
+   })
+
+   func main() {
+       patient, err := LookupPatient.Run(context.Background(), LookupInput{PatientID: "P-1004"})
+       if err != nil {
+           log.Fatal(err)
+       }
+       fmt.Printf("%+v\n", patient)
+   }
+   ```
+   </TabItem>
+   </Tabs>
+
+   This calls the `lookup_patient` operation that the demo project already has on the server, so
+   the code only declares the fields it wants back.
+
+</Steps>
+
+<Aside type="tip" title="Next">
+Write operations for your own program: [Writing operations](/docs/operations/) shows how to
+declare them, sync them and word the instructions so the agent gets them right.
+</Aside>
