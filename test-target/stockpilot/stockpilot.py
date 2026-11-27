@@ -25,8 +25,14 @@ import time
 import tkinter as tk
 from tkinter import font as tkfont
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-SEED = os.path.join(HERE, "stockpilot.seed.json")
+if getattr(sys, "frozen", False):
+    # Packaged as an .exe (release zip): the seed is bundled inside the exe, and the live
+    # data is kept next to the exe so edits survive restarts.
+    HERE = os.path.dirname(sys.executable)
+    SEED = os.path.join(getattr(sys, "_MEIPASS", HERE), "stockpilot.seed.json")
+else:
+    HERE = os.path.dirname(os.path.abspath(__file__))
+    SEED = os.path.join(HERE, "stockpilot.seed.json")
 DATA = os.path.join(HERE, "stockpilot.json")
 
 W, H = 1100, 680
